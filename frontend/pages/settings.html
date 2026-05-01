@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexis — Настройки</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+
+<body>
+  <nav class="nav">
+    <a class="nav-logo" href="/">
+      <div class="nav-logo-icon">T</div><span class="nav-logo-text">Lexis</span>
+    </a>
+    <div style="display:flex;gap:2px">
+      <a class="nav-link" href="/">📊 Дашборд</a>
+      <a class="nav-link" href="/train.html">🧠 Обучение</a>
+      <a class="nav-link" href="/chat.html">💬 Чат</a>
+      <a class="nav-link active" href="/settings.html">⚙️ Настройки</a>
+    </div>
+    <div class="nav-right">
+      <div id="nav-status" class="status-pill sp-idle"><span class="pulse-dot"></span><span
+          id="nav-status-txt">Ожидание</span></div>
+    </div>
+  </nav>
+  <div class="page-wrap">
+    <div id="save-ok" class="banner banner-success hidden">✅ Сохранено</div>
+
+    <div class="card">
+      <div class="card-title">📁 Основной датасет</div>
+      <div class="input-group">
+        <label class="input-label">Путь к text.txt</label>
+        <input class="inp" id="text-file" type="text" placeholder="C:\textreator\text.txt">
+        <div class="input-hint">Дополнительные файлы загружаются через Чат → Мои датасеты</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🖥️ Сервер</div>
+      <div class="input-group">
+        <label class="input-label">Порт (требует перезапуска)</label>
+        <input class="inp" id="server-port" type="number" value="5000" style="width:120px">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Состояние системы</div>
+      <div class="grid-4">
+        <div class="stat-card">
+          <div class="stat-num" id="sys-ram">—</div>
+          <div class="stat-lbl">RAM (ГБ)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="sys-cpu">—</div>
+          <div class="stat-lbl">CPU ядер</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="sys-stor">—</div>
+          <div class="stat-lbl">Checkpoints</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="sys-vocab">—</div>
+          <div class="stat-lbl">Словарь</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧠 Текущая модель</div>
+      <div class="grid-2">
+        <div>
+          <div class="metric-row"><span class="mk">Статус</span><span class="mv" id="m-status">—</span></div>
+          <div class="metric-row"><span class="mk">Параметры</span><span class="mv c-accent" id="m-params">—</span>
+          </div>
+          <div class="metric-row"><span class="mk">Лучший val loss</span><span class="mv c-green" id="m-best">—</span>
+          </div>
+          <div class="metric-row"><span class="mk">Эпох обучено</span><span class="mv" id="m-epochs">—</span></div>
+        </div>
+        <div>
+          <div class="metric-row"><span class="mk">d_model</span><span class="mv" id="p-dm">—</span></div>
+          <div class="metric-row"><span class="mk">n_layers</span><span class="mv" id="p-nl">—</span></div>
+          <div class="metric-row"><span class="mk">n_heads</span><span class="mv" id="p-nh">—</span></div>
+          <div class="metric-row"><span class="mk">seq_len</span><span class="mv" id="p-sl">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 Все правки (глобальный словарь)</div>
+      <p style="font-size:13px;color:var(--muted2);margin-bottom:12px">Применяются ко всем генерациям и учитываются при
+        следующем обучении.</p>
+      <div id="all-corr" class="corrections-list" style="max-height:300px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Логи сервера <button class="btn btn-ghost btn-sm ml-auto" onclick="loadLogs()">↺
+          Обновить</button></div>
+      <div id="log-viewer" class="log-box scroll-y" style="height:220px;font-size:11px"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary btn-lg" onclick="saveSettings()">💾 Сохранить</button>
+      <button class="btn btn-ghost" onclick="loadSettings()">↺ Обновить</button>
+    </div>
+  </div>
+
+  <script src="/js/utils.js"></script>
+  <script>
+    async function loadSettings() {
+      const cfg = await apiGet('/api/config');
+      const tf = $('text-file'); if (tf) tf.value = cfg.text_file || '';
+      const sp = $('server-port'); if (sp) sp.value = cfg.server_port || 5000;
+    }
+    async function saveSettings() {
+      const body = { text_file: $('text-file')?.value || '', server_port: parseInt($('server-port')?.value || 5000) };
+      const r = await apiPost('/api/config', body);
+      if (r.ok) { show('save-ok'); setTimeout(() => hide('save-ok'), 2500); }
+    }
+    async function loadAllCorrections() {
+      const me = await apiGet('/api/auth/me');
+      if (!me.auth) return;
+      const list = await apiGet('/api/corrections');
+      const el = $('all-corr'); if (!el) return;
+      if (!list.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:20px">Правок нет</div>'; return; }
+      el.innerHTML = list.map(c => `
+    <div class="correction-item">
+      <span class="corr-wrong">${escapeHtml(c.wrong)}</span>
+      <span class="corr-arrow">→</span>
+      <span class="corr-correct">${escapeHtml(c.correct)}</span>
+      <span class="corr-ctx">${escapeHtml(c.context || '')}</span>
+    </div>`).join('');
+    }
+    async function loadLogs() {
+      const r = await apiGet('/api/admin/logs?n=300');
+      const el = $('log-viewer'); if (!el) return;
+      el.innerHTML = '';
+      (r.lines || []).forEach(line => {
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        const type = line.includes('ERROR') ? 'error' : line.includes('WARNING') ? 'warn' : line.includes('★') ? 'good' : 'info';
+        div.innerHTML = `<span class="log-msg ${type}">${escapeHtml(line)}</span>`;
+        el.appendChild(div);
+      });
+      el.scrollTop = el.scrollHeight;
+    }
+    async function loadVocabSize() {
+      const s = await apiGet('/api/tokenize/status');
+      if (s.stats) tx('sys-vocab', fmtK(s.stats.vocab_size));
+    }
+    onSSE(function (d) {
+      const s = d.status;
+      const SCL = { idle: 'sp-idle', running: 'sp-running', paused: 'sp-paused', finished: 'sp-finished', error: 'sp-error', waiting: 'sp-idle' };
+      const SLB = { idle: 'Ожидание', running: 'Обучение', paused: 'Пауза', finished: 'Готово', error: 'Ошибка' };
+      const sp = $('nav-status'); if (sp) sp.className = 'status-pill ' + (SCL[s] || 'sp-idle');
+      tx('nav-status-txt', SLB[s] || s || '—');
+      tx('sys-ram', d.ram_used ? `${d.ram_used}/${d.ram_total}` : '—');
+      tx('sys-cpu', d.cpu_count ? d.cpu_count + ' лог.' : '—');
+      tx('sys-stor', d.storage_gb != null ? d.storage_gb + ' ГБ' : '—');
+      const SL = { idle: 'Ожидание', running: 'Обучается', paused: 'Пауза', finished: 'Готова', error: 'Ошибка' };
+      tx('m-status', SL[s] || s || '—');
+      tx('m-params', fmtK(d.total_params));
+      tx('m-best', d.best_val_loss ? d.best_val_loss.toFixed(4) : '—');
+      tx('m-epochs', d.current_epoch || '—');
+      const p = d.params || {};
+      tx('p-dm', p.d_model || '—'); tx('p-nl', p.n_layers || '—'); tx('p-nh', p.n_heads || '—'); tx('p-sl', p.seq_len || '—');
+    });
+    document.addEventListener('DOMContentLoaded', () => { loadSettings(); loadAllCorrections(); loadLogs(); loadVocabSize(); });
+  </script>
+</body>
+
+</html>

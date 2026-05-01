@@ -1,0 +1,535 @@
+10:15:11 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+10:15:11 | trainer    | Загрузка данных...
+10:15:11 | trainer    |   Токенов: 11,216 | vocab: 3,822 | batch: 64 | train: 157
+10:15:14 | trainer    | Обучение запущено.
+10:15:14 | trainer    |   [1:    0/157] loss=8.2617 PPL=3872.5 lr=5.00e-04
+10:15:28 | trainer    |   ★ Новый лучший val=7.1715
+10:15:28 | trainer    |   Epoch 1 | train=7.0472 PPL=1149.6 | val=7.1715 PPL=1301.8 | 14с
+10:15:28 | trainer    |   [2:    0/157] loss=6.4142 PPL=610.5 lr=4.88e-04
+10:15:41 | trainer    |   ★ Новый лучший val=7.0782
+10:15:41 | trainer    |   Epoch 2 | train=6.1119 PPL=451.2 | val=7.0782 PPL=1185.8 | 13с
+10:15:41 | trainer    |   [3:    0/157] loss=5.7547 PPL=315.7 lr=4.54e-04
+10:15:53 | trainer    |   Epoch 3 | train=5.5461 PPL=256.2 | val=7.1878 PPL=1323.2 | 12с
+10:15:53 | trainer    |   [4:    0/157] loss=5.3247 PPL=205.4 lr=4.02e-04
+10:16:06 | trainer    |   Epoch 4 | train=5.1548 PPL=173.3 | val=7.2438 PPL=1399.5 | 13с
+10:16:06 | trainer    |   [5:    0/157] loss=4.9349 PPL=139.1 lr=3.35e-04
+10:16:20 | trainer    |   Epoch 5 | train=4.8736 PPL=130.8 | val=7.1111 PPL=1225.5 | 13с
+10:16:20 | trainer    |   [6:    0/157] loss=4.7708 PPL=118.0 lr=2.62e-04
+10:16:34 | trainer    |   ★ Новый лучший val=7.0069
+10:16:34 | trainer    |   Epoch 6 | train=4.6721 PPL=106.9 | val=7.0069 PPL=1104.2 | 14с
+10:16:34 | trainer    |   [7:    0/157] loss=4.5350 PPL=93.2 lr=1.89e-04
+10:16:47 | trainer    |   ★ Новый лучший val=6.9962
+10:16:47 | trainer    |   Epoch 7 | train=4.5330 PPL=93.0 | val=6.9962 PPL=1092.5 | 13с
+10:16:47 | trainer    |   [8:    0/157] loss=4.4364 PPL=84.5 lr=1.23e-04
+10:16:59 | trainer    |   ★ Новый лучший val=6.9743
+10:16:59 | trainer    |   Epoch 8 | train=4.4445 PPL=85.2 | val=6.9743 PPL=1068.8 | 13с
+10:17:00 | trainer    |   [9:    0/157] loss=4.4362 PPL=84.5 lr=7.01e-05
+10:17:12 | trainer    |   ★ Новый лучший val=6.9709
+10:17:12 | trainer    |   Epoch 9 | train=4.3973 PPL=81.2 | val=6.9709 PPL=1065.2 | 13с
+10:17:12 | trainer    |   [10:    0/157] loss=4.3282 PPL=75.8 lr=3.65e-05
+10:17:25 | trainer    |   ★ Новый лучший val=6.9675
+10:17:25 | trainer    |   Epoch 10 | train=4.3683 PPL=78.9 | val=6.9675 PPL=1061.6 | 12с
+10:17:25 | trainer    |   [11:    0/157] loss=4.3562 PPL=78.0 lr=2.50e-05
+10:17:37 | trainer    |   Epoch 11 | train=4.3489 PPL=77.4 | val=6.9677 PPL=1061.8 | 12с
+10:17:37 | trainer    |   [12:    0/157] loss=4.3263 PPL=75.7 lr=3.68e-05
+10:17:49 | trainer    |   ★ Новый лучший val=6.9645
+10:17:49 | trainer    |   Epoch 12 | train=4.3258 PPL=75.6 | val=6.9645 PPL=1058.4 | 12с
+10:17:50 | trainer    |   [13:    0/157] loss=4.3075 PPL=74.3 lr=7.06e-05
+10:18:02 | trainer    |   Epoch 13 | train=4.2794 PPL=72.2 | val=6.9818 PPL=1076.8 | 12с
+10:18:02 | trainer    |   [14:    0/157] loss=4.2636 PPL=71.1 lr=1.23e-04
+10:18:15 | trainer    |   Epoch 14 | train=4.2036 PPL=66.9 | val=7.0208 PPL=1119.7 | 13с
+10:18:15 | trainer    |   [15:    0/157] loss=4.1678 PPL=64.6 lr=1.90e-04
+10:18:28 | trainer    |   Epoch 15 | train=4.0912 PPL=59.8 | val=7.0947 PPL=1205.6 | 12с
+10:18:28 | trainer    |   [16:    0/157] loss=4.0053 PPL=54.9 lr=2.63e-04
+10:18:40 | trainer    |   Epoch 16 | train=3.9404 PPL=51.4 | val=7.2703 PPL=1436.9 | 12с
+10:18:40 | trainer    |   [17:    0/157] loss=3.8268 PPL=45.9 lr=3.36e-04
+10:18:53 | trainer    |   Epoch 17 | train=3.7644 PPL=43.1 | val=7.4376 PPL=1698.6 | 13с
+10:18:53 | trainer    |   [18:    0/157] loss=3.7177 PPL=41.2 lr=4.02e-04
+10:19:06 | trainer    |   Epoch 18 | train=3.5713 PPL=35.6 | val=7.6123 PPL=2023.0 | 13с
+10:19:07 | trainer    |   [19:    0/157] loss=3.4543 PPL=31.6 lr=4.55e-04
+10:19:09 | trainer    |   СТОП на шаге 30
+10:21:51 | pymorphy3.opencorpora_dict.wrapper | Loading dictionaries from C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymorphy3_dicts_ru\data
+10:21:51 | pymorphy3.opencorpora_dict.wrapper | format: 2.4, revision: 417150, updated: 2022-01-08T22:09:24.565962
+10:24:15 | trainer    | Загрузка данных...
+10:24:15 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 72 | train: 2,366
+10:24:16 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+10:24:16 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+10:24:53 | trainer    | Загрузка данных...
+10:24:53 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+10:24:53 | trainer    | Обучение запущено.
+10:24:54 | trainer    |   [1:    0/2662] loss=10.2673 PPL=28775.7 lr=3.00e-04
+10:25:06 | trainer    |   СТОП на шаге 20
+10:25:33 | trainer    | Загрузка данных...
+10:25:33 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+10:25:33 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+10:25:33 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 256]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 256]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([768, 256]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 256]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 256]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 256]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([768, 256]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([256, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 256]).
+10:25:43 | trainer    | Загрузка данных...
+10:25:43 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+10:25:43 | trainer    | Обучение запущено.
+10:25:45 | trainer    |   [1:    0/2662] loss=10.2624 PPL=28636.2 lr=3.00e-04
+10:25:52 | trainer    |   СТОП на шаге 10
+10:35:52 | trainer    | Загрузка данных...
+10:35:52 | trainer    |   Добавлено 1 правок в обучение
+10:35:52 | trainer    |   Токенов: 189,368 | vocab: 27,253 | batch: 64 | train: 2,661
+10:35:52 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+10:35:52 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([128, 192]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.attn.mask: copying a param with shape torch.Size([1, 1, 32, 32]) from checkpoint, the shape in current model is torch.Size([1, 1, 128, 128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([576, 192]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([192, 192]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 192]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([192, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([128, 192]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.attn.mask: copying a param with shape torch.Size([1, 1, 32, 32]) from checkpoint, the shape in current model is torch.Size([1, 1, 128, 128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([576, 192]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([192, 192]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 192]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([192, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+10:36:05 | trainer    | Загрузка данных...
+10:36:05 | trainer    |   Добавлено 1 правок в обучение
+10:36:05 | trainer    |   Токенов: 189,368 | vocab: 27,253 | batch: 56 | train: 3,041
+10:36:05 | trainer    | Обучение запущено.
+10:36:17 | trainer    |   [1:    0/3041] loss=10.2480 PPL=28226.5 lr=3.00e-04
+10:37:22 | trainer    |   СТОП на шаге 10
+21:02:10 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:02:10 | trainer    | Загрузка данных...
+21:02:10 | trainer    |   Добавлено 1 правок в обучение
+21:02:10 | trainer    |   Токенов: 189,368 | vocab: 27,253 | batch: 56 | train: 3,041
+21:02:13 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+21:02:13 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([128, 192]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.attn.mask: copying a param with shape torch.Size([1, 1, 32, 32]) from checkpoint, the shape in current model is torch.Size([1, 1, 128, 128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([576, 192]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([192, 192]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 192]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([192, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([128, 192]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.attn.mask: copying a param with shape torch.Size([1, 1, 32, 32]) from checkpoint, the shape in current model is torch.Size([1, 1, 128, 128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([576, 192]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([192, 192]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 192]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([192, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([192]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27253, 64]) from checkpoint, the shape in current model is torch.Size([27253, 192]).
+21:02:21 | trainer    | Загрузка данных...
+21:02:21 | trainer    |   Добавлено 1 правок в обучение
+21:02:21 | trainer    |   Токенов: 189,368 | vocab: 27,253 | batch: 56 | train: 3,041
+21:02:21 | trainer    | Обучение запущено.
+21:02:29 | trainer    |   [1:    0/3041] loss=10.2870 PPL=29349.5 lr=3.00e-04
+21:11:46 | trainer    |   [1:  200/3041] loss=6.6797 PPL=796.1 lr=3.00e-04
+21:20:46 | trainer    |   [1:  400/3041] loss=6.2839 PPL=535.9 lr=3.00e-04
+21:29:44 | trainer    |   [1:  600/3041] loss=5.8455 PPL=345.7 lr=3.00e-04
+21:38:43 | trainer    |   [1:  800/3041] loss=5.5601 PPL=259.8 lr=3.00e-04
+21:47:43 | trainer    |   [1: 1000/3041] loss=5.3058 PPL=201.5 lr=2.99e-04
+21:56:56 | trainer    |   [1: 1200/3041] loss=5.1328 PPL=169.5 lr=2.99e-04
+22:06:07 | trainer    |   [1: 1400/3041] loss=4.9511 PPL=141.3 lr=2.99e-04
+22:15:16 | trainer    |   [1: 1600/3041] loss=4.6877 PPL=108.6 lr=2.98e-04
+22:24:21 | trainer    |   [1: 1800/3041] loss=4.4983 PPL=89.9 lr=2.98e-04
+22:33:25 | trainer    |   [1: 2000/3041] loss=4.3313 PPL=76.0 lr=2.97e-04
+22:42:30 | trainer    |   [1: 2200/3041] loss=4.0903 PPL=59.8 lr=2.96e-04
+22:51:36 | trainer    |   [1: 2400/3041] loss=3.9317 PPL=51.0 lr=2.96e-04
+23:00:50 | trainer    |   [1: 2600/3041] loss=3.7304 PPL=41.7 lr=2.95e-04
+23:09:54 | trainer    |   [1: 2800/3041] loss=3.5157 PPL=33.6 lr=2.94e-04
+23:18:54 | trainer    |   [1: 3000/3041] loss=3.3157 PPL=27.5 lr=2.93e-04
+23:24:21 | trainer    |   ★ Новый лучший val=8.1395
+23:24:21 | trainer    |   Epoch 1 | train=4.9381 PPL=139.5 | val=8.1395 PPL=3427.2 | 8520с
+23:24:27 | trainer    |   [2:    0/3041] loss=3.2617 PPL=26.1 lr=2.93e-04
+23:33:39 | trainer    |   [2:  200/3041] loss=3.1106 PPL=22.4 lr=2.92e-04
+23:42:48 | trainer    |   [2:  400/3041] loss=2.9340 PPL=18.8 lr=2.91e-04
+23:51:57 | trainer    |   [2:  600/3041] loss=2.7607 PPL=15.8 lr=2.90e-04
+00:01:36 | trainer    |   [2:  800/3041] loss=2.6106 PPL=13.6 lr=2.89e-04
+00:11:04 | trainer    |   [2: 1000/3041] loss=2.5222 PPL=12.5 lr=2.88e-04
+00:20:18 | trainer    |   [2: 1200/3041] loss=2.3751 PPL=10.8 lr=2.87e-04
+00:29:29 | trainer    |   [2: 1400/3041] loss=2.1537 PPL=8.6 lr=2.85e-04
+00:38:39 | trainer    |   [2: 1600/3041] loss=2.0963 PPL=8.1 lr=2.84e-04
+00:47:51 | trainer    |   [2: 1800/3041] loss=1.9447 PPL=7.0 lr=2.83e-04
+00:57:17 | trainer    |   [2: 2000/3041] loss=1.8282 PPL=6.2 lr=2.81e-04
+01:06:28 | trainer    |   [2: 2200/3041] loss=1.8134 PPL=6.1 lr=2.80e-04
+01:15:37 | trainer    |   [2: 2400/3041] loss=1.6862 PPL=5.4 lr=2.78e-04
+01:24:46 | trainer    |   [2: 2600/3041] loss=1.6039 PPL=5.0 lr=2.76e-04
+01:33:56 | trainer    |   [2: 2800/3041] loss=1.4725 PPL=4.4 lr=2.75e-04
+01:43:05 | trainer    |   [2: 3000/3041] loss=1.4923 PPL=4.4 lr=2.73e-04
+01:48:39 | trainer    |   Epoch 2 | train=2.2191 PPL=9.2 | val=9.8484 PPL=18927.1 | 8657с
+01:48:47 | trainer    |   [3:    0/3041] loss=1.3894 PPL=4.0 lr=2.73e-04
+01:58:13 | trainer    |   [3:  200/3041] loss=1.3861 PPL=4.0 lr=2.71e-04
+02:07:26 | trainer    |   [3:  400/3041] loss=1.2938 PPL=3.6 lr=2.69e-04
+02:16:37 | trainer    |   [3:  600/3041] loss=1.2573 PPL=3.5 lr=2.67e-04
+02:25:49 | trainer    |   [3:  800/3041] loss=1.2836 PPL=3.6 lr=2.65e-04
+02:34:59 | trainer    |   [3: 1000/3041] loss=1.1136 PPL=3.0 lr=2.64e-04
+02:44:09 | trainer    |   [3: 1200/3041] loss=1.0958 PPL=3.0 lr=2.62e-04
+02:53:25 | trainer    |   [3: 1400/3041] loss=1.0843 PPL=3.0 lr=2.59e-04
+03:02:45 | trainer    |   [3: 1600/3041] loss=1.0038 PPL=2.7 lr=2.57e-04
+03:11:59 | trainer    |   [3: 1800/3041] loss=1.1021 PPL=3.0 lr=2.55e-04
+03:21:19 | trainer    |   [3: 2000/3041] loss=1.0017 PPL=2.7 lr=2.53e-04
+03:30:34 | trainer    |   [3: 2200/3041] loss=0.9259 PPL=2.5 lr=2.51e-04
+03:39:46 | trainer    |   [3: 2400/3041] loss=0.9020 PPL=2.5 lr=2.49e-04
+03:49:01 | trainer    |   [3: 2600/3041] loss=0.9426 PPL=2.6 lr=2.46e-04
+03:58:25 | trainer    |   [3: 2800/3041] loss=0.8499 PPL=2.3 lr=2.44e-04
+04:07:37 | trainer    |   [3: 3000/3041] loss=0.8525 PPL=2.3 lr=2.42e-04
+04:13:17 | trainer    |   Epoch 3 | train=1.0952 PPL=3.0 | val=11.0707 PPL=64263.3 | 8677с
+04:13:24 | trainer    |   [4:    0/3041] loss=0.9010 PPL=2.5 lr=2.41e-04
+04:22:44 | trainer    |   [4:  200/3041] loss=0.8119 PPL=2.3 lr=2.39e-04
+04:31:57 | trainer    |   [4:  400/3041] loss=0.8967 PPL=2.5 lr=2.36e-04
+04:41:08 | trainer    |   [4:  600/3041] loss=0.8348 PPL=2.3 lr=2.34e-04
+04:50:21 | trainer    |   [4:  800/3041] loss=0.7229 PPL=2.1 lr=2.31e-04
+04:59:52 | trainer    |   [4: 1000/3041] loss=0.7527 PPL=2.1 lr=2.29e-04
+05:08:59 | trainer    |   [4: 1200/3041] loss=0.7436 PPL=2.1 lr=2.26e-04
+05:18:08 | trainer    |   [4: 1400/3041] loss=0.7237 PPL=2.1 lr=2.24e-04
+05:27:19 | trainer    |   [4: 1600/3041] loss=0.7667 PPL=2.2 lr=2.21e-04
+05:36:33 | trainer    |   [4: 1800/3041] loss=0.7503 PPL=2.1 lr=2.18e-04
+05:45:46 | trainer    |   [4: 2000/3041] loss=0.6795 PPL=2.0 lr=2.16e-04
+05:55:07 | trainer    |   [4: 2200/3041] loss=0.6471 PPL=1.9 lr=2.13e-04
+06:04:19 | trainer    |   [4: 2400/3041] loss=0.7172 PPL=2.0 lr=2.10e-04
+06:13:33 | trainer    |   [4: 2600/3041] loss=0.6845 PPL=2.0 lr=2.08e-04
+06:22:47 | trainer    |   [4: 2800/3041] loss=0.6509 PPL=1.9 lr=2.05e-04
+06:32:04 | trainer    |   [4: 3000/3041] loss=0.6848 PPL=2.0 lr=2.02e-04
+06:37:43 | trainer    |   Epoch 4 | train=0.7438 PPL=2.1 | val=11.6659 PPL=116526.2 | 8665с
+06:37:49 | trainer    |   [5:    0/3041] loss=0.6626 PPL=1.9 lr=2.02e-04
+06:47:01 | trainer    |   [5:  200/3041] loss=0.6423 PPL=1.9 lr=1.99e-04
+06:56:27 | trainer    |   [5:  400/3041] loss=0.6222 PPL=1.9 lr=1.96e-04
+07:05:38 | trainer    |   [5:  600/3041] loss=0.6558 PPL=1.9 lr=1.93e-04
+07:15:09 | trainer    |   [5:  800/3041] loss=0.6077 PPL=1.8 lr=1.90e-04
+07:24:19 | trainer    |   [5: 1000/3041] loss=0.6247 PPL=1.9 lr=1.87e-04
+07:33:28 | trainer    |   [5: 1200/3041] loss=0.5994 PPL=1.8 lr=1.84e-04
+07:42:18 | trainer    |   СТОП на шаге 1390
+07:49:49 | pymorphy3.opencorpora_dict.wrapper | Loading dictionaries from C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymorphy3_dicts_ru\data
+07:49:49 | pymorphy3.opencorpora_dict.wrapper | format: 2.4, revision: 417150, updated: 2022-01-08T22:09:24.565962
+09:09:09 | pymorphy3.opencorpora_dict.wrapper | Loading dictionaries from C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\pymorphy3_dicts_ru\data
+09:09:09 | pymorphy3.opencorpora_dict.wrapper | format: 2.4, revision: 417150, updated: 2022-01-08T22:09:24.565962
+21:05:36 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:05:36 | trainer    | Загрузка данных...
+21:05:37 | trainer    |   Добавлено 1 правок в обучение
+21:05:37 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:05:39 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+21:05:39 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+21:06:42 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:06:42 | trainer    | Загрузка данных...
+21:06:42 | trainer    |   Добавлено 1 правок в обучение
+21:06:42 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:06:44 | trainer    | Обучение запущено.
+21:06:45 | trainer    |   [1:    0/2662] loss=10.2595 PPL=28552.7 lr=3.00e-04
+21:07:03 | trainer    |   СТОП на шаге 30
+21:07:10 | trainer    | Загрузка данных...
+21:07:11 | trainer    |   Добавлено 1 правок в обучение
+21:07:11 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:07:11 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+21:07:11 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+21:09:00 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:09:00 | trainer    | Загрузка данных...
+21:09:00 | trainer    |   Добавлено 1 правок в обучение
+21:09:00 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:09:02 | trainer    | Обучение запущено.
+21:09:02 | trainer    |   [1:    0/2662] loss=10.2246 PPL=27572.1 lr=3.00e-04
+21:10:10 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:10:10 | trainer    | Загрузка данных...
+21:10:10 | trainer    |   Добавлено 1 правок в обучение
+21:10:10 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:10:11 | trainer    | Обучение запущено.
+21:10:12 | trainer    |   [1:    0/2662] loss=10.2297 PPL=27714.9 lr=3.00e-04
+21:10:17 | trainer    |   СТОП на шаге 10
+21:10:23 | trainer    | Загрузка данных...
+21:10:23 | trainer    |   Добавлено 1 правок в обучение
+21:10:23 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:10:23 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+21:10:23 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+21:10:46 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:10:46 | trainer    | Загрузка данных...
+21:10:46 | trainer    |   Добавлено 1 правок в обучение
+21:10:46 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:10:47 | trainer    | Обучение запущено.
+21:10:48 | trainer    |   [1:    0/2662] loss=10.2428 PPL=28080.4 lr=3.00e-04
+21:10:59 | trainer    |   СТОП на шаге 20
+21:11:02 | trainer    | Загрузка данных...
+21:11:02 | trainer    |   Добавлено 1 правок в обучение
+21:11:02 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:11:03 | trainer    |   Чекпоинт: c:\Projects\lexis-v4\textreator6\storage\checkpoints\epoch_0019.pt
+21:11:03 | server     | Trainer error: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+Traceback (most recent call last):
+  File "c:\Projects\lexis-v4\textreator6\backend\server.py", line 412, in _trainer_body
+    run(params, version_id=version_id)
+  File "c:\Projects\lexis-v4\textreator6\core\trainer.py", line 196, in run
+    model.load_state_dict(ckpt["model"], strict=False)
+  File "C:\Users\savel\AppData\Local\Programs\Python\Python312\Lib\site-packages\torch\nn\modules\module.py", line 2639, in load_state_dict
+    raise RuntimeError(
+RuntimeError: Error(s) in loading state_dict for MiniGPT:
+	size mismatch for tok_emb.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+	size mismatch for pos_emb.weight: copying a param with shape torch.Size([32, 64]) from checkpoint, the shape in current model is torch.Size([32, 128]).
+	size mismatch for blocks.0.ln1.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln1.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.attn.qkv.weight: copying a param with shape torch.Size([192, 64]) from checkpoint, the shape in current model is torch.Size([384, 128]).
+	size mismatch for blocks.0.attn.proj.weight: copying a param with shape torch.Size([64, 64]) from checkpoint, the shape in current model is torch.Size([128, 128]).
+	size mismatch for blocks.0.ln2.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ln2.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for blocks.0.ff.0.weight: copying a param with shape torch.Size([128, 64]) from checkpoint, the shape in current model is torch.Size([256, 128]).
+	size mismatch for blocks.0.ff.0.bias: copying a param with shape torch.Size([128]) from checkpoint, the shape in current model is torch.Size([256]).
+	size mismatch for blocks.0.ff.3.weight: copying a param with shape torch.Size([64, 128]) from checkpoint, the shape in current model is torch.Size([128, 256]).
+	size mismatch for blocks.0.ff.3.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.weight: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for ln_f.bias: copying a param with shape torch.Size([64]) from checkpoint, the shape in current model is torch.Size([128]).
+	size mismatch for head.weight: copying a param with shape torch.Size([27252, 64]) from checkpoint, the shape in current model is torch.Size([27252, 128]).
+21:11:20 | trainer    | PyTorch 2.11.0+cpu | потоков: 6
+21:11:20 | trainer    | Загрузка данных...
+21:11:20 | trainer    |   Добавлено 1 правок в обучение
+21:11:20 | trainer    |   Токенов: 189,368 | vocab: 27,252 | batch: 64 | train: 2,662
+21:11:21 | trainer    | Обучение запущено.
+21:11:22 | trainer    |   [1:    0/2662] loss=10.2474 PPL=28207.9 lr=3.00e-04
+21:11:47 | trainer    |   СТОП на шаге 40

@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexis — Дашборд</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    /* ── Chart ─────────────────────────────── */
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      background: var(--bg3);
+      border-radius: var(--rs);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .chart-svg {
+      display: block;
+      width: 100%;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .15s;
+      z-index: 10;
+      min-width: 120px;
+    }
+
+    .chart-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .chart-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted2);
+      transition: all .15s;
+    }
+
+    .chart-toggle.active {
+      color: var(--text);
+      border-color: currentColor;
+    }
+
+    .chart-toggle .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Analytics block ────────────────────── */
+    .analytics-block {
+      border-radius: var(--r);
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.65;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      transition: border-color .3s;
+    }
+
+    .analytics-block.good {
+      border-color: rgba(34, 211, 165, .4);
+    }
+
+    .analytics-block.warn {
+      border-color: rgba(247, 190, 66, .4);
+    }
+
+    .analytics-block.danger {
+      border-color: rgba(247, 85, 85, .4);
+    }
+
+    .analytics-icon {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .analytics-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .analytics-verdict {
+      font-size: 13px;
+      color: var(--muted2);
+    }
+
+    .analytics-metrics {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .analytics-metric {
+      font-size: 11px;
+      background: var(--bg3);
+      border-radius: 5px;
+      padding: 4px 10px;
+    }
+
+    .analytics-metric b {
+      color: var(--accent);
+    }
+
+    /* ── Cores ──────────────────────────────── */
+    .cores-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .core-bar {
+      width: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .core-track {
+      width: 22px;
+      height: 40px;
+      background: var(--bg3);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .core-fill {
+      width: 100%;
+      background: var(--accent);
+      position: absolute;
+      bottom: 0;
+      transition: height .5s;
+    }
+
+    .core-lbl {
+      font-size: 9px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="nav">
+    <a class="nav-logo" href="/">
+      <div class="nav-logo-icon">T</div><span class="nav-logo-text">Lexis</span>
+    </a>
+    <div style="display:flex;gap:2px">
+      <a class="nav-link active" href="/">📊 Дашборд</a>
+      <a class="nav-link" id="nav-train" href="/train.html">🧠 Обучение</a>
+      <a class="nav-link" href="/chat.html">💬 Чат</a>
+      <a class="nav-link" id="nav-settings" href="/settings.html">⚙️ Настройки</a>
+    </div>
+    <div class="nav-right">
+      <div id="nav-status" class="status-pill sp-idle"><span class="pulse-dot"></span><span
+          id="nav-status-txt">Ожидание</span></div>
+    </div>
+  </nav>
+
+  <div class="page-wrap">
+    <!-- Banners -->
+    <div id="b-idle" class="banner banner-info">💡 Перейди в <a class="link" href="/train.html">Обучение</a> —
+      токенизируй текст и запусти трансформер. После первой эпохи можно идти в <a class="link"
+        href="/chat.html">Чат</a>.</div>
+    <div id="b-pause" class="banner banner-warn hidden">⏸ Обучение на паузе — перейди в <a class="link"
+        href="/train.html">Обучение</a> и нажми «Продолжить».</div>
+    <div id="b-done" class="banner banner-success hidden">🏆 Обучение завершено! <span id="b-done-sub"></span></div>
+    <div id="b-err" class="banner banner-error hidden">❌ <span id="b-err-msg"></span></div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi" style="--kc:var(--accent)">
+        <div class="kpi-label">Эпоха</div>
+        <div class="kpi-val" id="k-ep">—</div>
+        <div class="kpi-sub" id="k-ep-s"></div>
+      </div>
+      <div class="kpi" style="--kc:var(--red)">
+        <div class="kpi-label">Train Loss</div>
+        <div class="kpi-val" id="k-tl">—</div>
+        <div class="kpi-sub" id="k-tppl"></div>
+      </div>
+      <div class="kpi" style="--kc:var(--green)">
+        <div class="kpi-label">Val Loss</div>
+        <div class="kpi-val" id="k-vl">—</div>
+        <div class="kpi-sub" id="k-best"></div>
+      </div>
+      <div class="kpi" style="--kc:var(--yellow)">
+        <div class="kpi-label">Прошло</div>
+        <div class="kpi-val" id="k-el">—</div>
+        <div class="kpi-sub" id="k-eta"></div>
+      </div>
+      <div class="kpi" style="--kc:var(--accent2)">
+        <div class="kpi-label">Точность</div>
+        <div class="kpi-val" id="k-acc">—</div>
+        <div class="kpi-sub" id="k-lr"></div>
+      </div>
+      <div class="kpi" style="--kc:var(--cyan)">
+        <div class="kpi-label">Параметры</div>
+        <div class="kpi-val" id="k-par">—</div>
+        <div class="kpi-sub" id="k-voc"></div>
+      </div>      <div class="kpi" style="--kc:var(--cyan)">
+        <div class="kpi-label">Модель</div>
+        <div class="kpi-val" id="k-model">—</div>
+        <div class="kpi-sub" id="k-model-s"></div>
+      </div>    </div>
+
+    <!-- Progress -->
+    <div class="card">
+      <div class="card-title">▶ Прогресс батча <span class="ct-extra" id="prog-profile"></span></div>
+      <div class="prog-wrap">
+        <div class="prog-label">
+          <span>Эпоха <b id="p-ep">?</b> — батч <b id="p-bt">?</b>/<b id="p-tot">?</b></span>
+          <b id="p-pct">0%</b>
+        </div>
+        <div class="prog-bg">
+          <div class="prog-bar" id="pb" style="width:0%"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;margin-top:8px;font-size:12px;color:var(--muted2)">
+        <span>ETA: <b style="color:var(--yellow)" id="eta-ep">—</b></span>
+        <span>RAM: <b style="color:var(--cyan)" id="ram-l">—</b></span>
+        <span>CPU: <b style="color:var(--accent)" id="cpu-l">—</b></span>
+        <span>Текущий loss: <b style="color:var(--red)" id="cur-loss">—</b></span>
+      </div>
+    </div>
+
+    <!-- Chart + metrics -->
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-title">
+          📈 Динамика обучения
+          <div class="chart-controls ml-auto">
+            <button class="chart-toggle active" id="tog-train" onclick="toggleSeries('train')"
+              style="color:#4f8ef7;border-color:#4f8ef7">
+              <span class="dot" style="background:#4f8ef7"></span>Train Loss
+            </button>
+            <button class="chart-toggle active" id="tog-val" onclick="toggleSeries('val')"
+              style="color:#22d3a5;border-color:#22d3a5">
+              <span class="dot" style="background:#22d3a5"></span>Val Loss
+            </button>
+            <button class="chart-toggle" id="tog-ppl" onclick="toggleSeries('ppl')" style="color:#f7be42">
+              <span class="dot" style="background:#f7be42"></span>PPL
+            </button>
+            <button class="chart-toggle" id="tog-lr" onclick="toggleSeries('lr')" style="color:#a78bfa">
+              <span class="dot" style="background:#a78bfa"></span>LR
+            </button>
+            <button class="chart-toggle" id="tog-acc" onclick="toggleSeries('acc')" style="color:#fb923c">
+              <span class="dot" style="background:#fb923c"></span>Acc
+            </button>
+          </div>
+        </div>
+        <div class="chart-wrap" id="chart-wrap" style="height:200px">
+          <svg id="loss-chart" class="chart-svg" style="height:200px" viewBox="0 0 800 200"
+            preserveAspectRatio="xMidYMid meet">
+            <text x="400" y="108" text-anchor="middle" fill="#5a6a82" font-size="13">Данные появятся после первой
+              эпохи</text>
+          </svg>
+          <div class="chart-tooltip" id="chart-tip"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎯 Метрики</div>
+        <div class="metric-row"><span class="mk">Train Loss</span><span class="mv" style="color:#93c5fd"
+            id="m-tl">—</span></div>
+        <div class="metric-row"><span class="mk">Val Loss</span><span class="mv c-green" id="m-vl">—</span></div>
+        <div class="metric-row"><span class="mk">Train PPL</span><span class="mv" id="m-tp">—</span></div>
+        <div class="metric-row"><span class="mk">Val PPL</span><span class="mv" id="m-vp">—</span></div>
+        <div class="metric-row"><span class="mk">Лучший Val</span><span class="mv c-green" id="m-bv">—</span></div>
+        <div class="metric-row"><span class="mk">Learning Rate</span><span class="mv" id="m-lr">—</span></div>
+        <div class="metric-row"><span class="mk">Точность</span><span class="mv c-yellow" id="m-acc">—</span></div>
+        <div class="metric-row"><span class="mk">Эпоха / Лучшая</span><span class="mv" id="m-ep">—</span></div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="analytics-block" id="analytics-block">
+      <div class="analytics-icon" id="an-icon">🤔</div>
+      <div class="analytics-title" id="an-title">Аналитика обучения</div>
+      <div class="analytics-verdict" id="an-verdict">Ожидание данных…</div>
+      <div class="analytics-metrics" id="an-metrics"></div>
+    </div>
+
+    <!-- System + History -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">💻 Система <span class="ct-extra">CPU <b id="cpu-tot">—</b>%</span></div>
+        <div style="display:flex;gap:16px;align-items:center">
+          <div style="flex:1">
+            <div class="metric-row"><span class="mk">RAM</span><span class="mv" id="sys-ram">—</span></div>
+            <div class="metric-row"><span class="mk">CPU частота</span><span class="mv c-accent" id="sys-freq">—</span>
+            </div>
+            <div class="metric-row"><span class="mk">Checkpoints</span><span class="mv" id="sys-stor">—</span></div>
+          </div>
+          <svg viewBox="0 0 80 80" style="width:80px;height:80px;flex-shrink:0">
+            <circle cx="40" cy="40" r="32" fill="none" stroke="#141e2e" stroke-width="8" />
+            <circle id="ram-arc" cx="40" cy="40" r="32" fill="none" stroke="#4f8ef7" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="0 201" transform="rotate(-90 40 40)"
+              style="transition:stroke-dasharray .5s" />
+            <text id="ram-pct-t" x="40" y="37" text-anchor="middle" fill="#e8edf5" font-size="12"
+              font-weight="700">—%</text>
+            <text id="ram-gb-t" x="40" y="50" text-anchor="middle" fill="#5a6a82" font-size="7">— / — ГБ</text>
+          </svg>
+        </div>
+        <div class="cores-grid" id="cores-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 История эпох</div>
+        <div style="max-height:260px;overflow-y:auto">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Train</th>
+                <th>Val</th>
+                <th>PPL</th>
+                <th>Сек</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="epoch-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/utils.js"></script>
+  <script>
+    // ── Серии для графика ──────────────────────
+    const SERIES = {
+      train: { label: 'Train Loss', color: '#4f8ef7', active: true, scale: 'loss' },
+      val: { label: 'Val Loss', color: '#22d3a5', active: true, scale: 'loss' },
+      ppl: { label: 'PPL', color: '#f7be42', active: false, scale: 'ppl' },
+      lr: { label: 'LR', color: '#a78bfa', active: false, scale: 'lr' },
+      acc: { label: 'Acc %', color: '#fb923c', active: false, scale: 'acc' },
+    };
+
+    let _history = [];
+    let _batchData = [];       // {step, loss} — каждые 5 батчей
+    let _batchBuf = [];       // буфер между обновлениями
+    let _lastBatch = 0;
+    const W = 800, H = 200, PAD = { t: 12, b: 28, l: 36, r: 16 };
+
+    function toggleSeries(key) {
+      SERIES[key].active = !SERIES[key].active;
+      const btn = document.getElementById('tog-' + key);
+      if (btn) btn.classList.toggle('active', SERIES[key].active);
+      drawChart();
+    }
+
+    function drawChart() {
+      const svg = document.getElementById('loss-chart');
+      if (!svg) return;
+      if (_history.length < 2 && _batchData.length < 2) {
+        svg.innerHTML = '<text x="400" y="108" text-anchor="middle" fill="#5a6a82" font-size="13">Данные появятся после первой эпохи</text>';
+        return;
+      }
+
+      const activeSeries = Object.entries(SERIES).filter(([, s]) => s.active);
+      if (!activeSeries.length) {
+        svg.innerHTML = '<text x="400" y="108" text-anchor="middle" fill="#5a6a82" font-size="13">Нет активных серий</text>';
+        return;
+      }
+
+      const cw = W - PAD.l - PAD.r;
+      const ch = H - PAD.t - PAD.b;
+
+      // Собираем данные по эпохам
+      const epochData = {
+        train: _history.map(h => ({ x: h.epoch, y: h.train_loss })),
+        val: _history.map(h => ({ x: h.epoch, y: h.val_loss })),
+        ppl: _history.map(h => ({ x: h.epoch, y: h.val_ppl })),
+        lr: _history.map(h => ({ x: h.epoch, y: h.lr })),
+        acc: _history.map(h => ({ x: h.epoch, y: h.train_ppl ? 100 / h.train_ppl : 0 })),
+      };
+
+      // Добавляем батчевые данные поверх train
+      const batchLine = _batchData.length > 1 ? _batchData : null;
+
+      // Вычисляем диапазоны по активным сериям
+      let xMin = Infinity, xMax = -Infinity;
+      let rangesByScale = {};
+      for (const [key, s] of activeSeries) {
+        const pts = epochData[key];
+        if (!pts.length) continue;
+        pts.forEach(p => { xMin = Math.min(xMin, p.x); xMax = Math.max(xMax, p.x); });
+        const ys = pts.map(p => p.y).filter(v => v != null && isFinite(v));
+        if (!ys.length) continue;
+        if (!rangesByScale[s.scale]) rangesByScale[s.scale] = { min: Infinity, max: -Infinity };
+        rangesByScale[s.scale].min = Math.min(rangesByScale[s.scale].min, ...ys);
+        rangesByScale[s.scale].max = Math.max(rangesByScale[s.scale].max, ...ys);
+      }
+      if (batchLine && SERIES.train.active) {
+        batchLine.forEach(p => {
+          xMin = Math.min(xMin, p.x / 100);
+          xMax = Math.max(xMax, p.x / 100);
+          if (rangesByScale.loss) {
+            rangesByScale.loss.min = Math.min(rangesByScale.loss.min, p.y);
+            rangesByScale.loss.max = Math.max(rangesByScale.loss.max, p.y);
+          }
+        });
+      }
+
+      if (!isFinite(xMin)) return;
+      if (xMax === xMin) xMax = xMin + 1;
+
+      const px = x => PAD.l + (x - xMin) / (xMax - xMin) * cw;
+
+      // Используем основной scale (loss) для Y
+      const mainScale = rangesByScale.loss || rangesByScale.ppl || rangesByScale.acc || { min: 0, max: 1 };
+      const yRange = mainScale.max - mainScale.min || 1;
+      const py = (y, scale) => {
+        const r = rangesByScale[scale] || mainScale;
+        const range = r.max - r.min || 1;
+        return PAD.t + (1 - (y - r.min) / range) * ch;
+      };
+
+      const polyline = (pts, scale, color, dash = '') => {
+        if (pts.length < 2) return '';
+        const d = pts.filter(p => p.y != null && isFinite(p.y))
+          .map(p => `${px(p.x).toFixed(1)},${py(p.y, scale).toFixed(1)}`).join(' ');
+        return `<polyline points="${d}" fill="none" stroke="${color}" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round" ${dash ? 'stroke-dasharray="' + dash + '"' : ''} opacity="0.9"/>`;
+      };
+
+      // Сетка Y (5 линий)
+      let grid = '';
+      for (let i = 0; i <= 4; i++) {
+        const y = PAD.t + (i / 4) * ch;
+        const val = mainScale.max - (i / 4) * yRange;
+        grid += `<line x1="${PAD.l}" y1="${y.toFixed(1)}" x2="${W - PAD.r}" y2="${y.toFixed(1)}"
+      stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+        grid += `<text x="${PAD.l - 4}" y="${(y + 4).toFixed(1)}" text-anchor="end" fill="#5a6a82" font-size="9">${val.toFixed(2)}</text>`;
+      }
+
+      // X ось — метки эпох
+      let xLabels = '';
+      const step = Math.max(1, Math.ceil((_history.length || 1) / 8));
+      _history.filter((_, i) => i % step === 0).forEach(h => {
+        const x = px(h.epoch);
+        xLabels += `<text x="${x.toFixed(1)}" y="${H - 4}" text-anchor="middle" fill="#5a6a82" font-size="9">${h.epoch}</text>`;
+      });
+
+      // Линии серий
+      let lines = '';
+      for (const [key, s] of activeSeries) {
+        const pts = epochData[key];
+        if (pts.length) lines += polyline(pts, s.scale, s.color);
+      }
+
+      // Батчевая линия train (пунктир, тоньше)
+      if (batchLine && SERIES.train.active) {
+        const pts = batchLine.map(p => ({ x: p.x / 100, y: p.y }));
+        lines += polyline(pts, 'loss', '#4f8ef7', '4 2').replace('stroke-width="2"', 'stroke-width="1.5"');
+      }
+
+      // Точки лучших эпох
+      let dots = '';
+      _history.forEach(h => {
+        if (h.is_best && SERIES.val.active) {
+          const x = px(h.epoch), y = py(h.val_loss, 'loss');
+          dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#22d3a5" stroke="var(--bg2)" stroke-width="2"/>`;
+        }
+      });
+
+      svg.innerHTML = grid + xLabels + lines + dots;
+
+      // Hover tooltip
+      setupChartHover(svg, epochData);
+    }
+
+    function setupChartHover(svg, epochData) {
+      const tip = document.getElementById('chart-tip');
+      const wrap = document.getElementById('chart-wrap');
+      if (!tip || !wrap) return;
+
+      svg.onmousemove = (e) => {
+        const rect = svg.getBoundingClientRect();
+        const xRel = (e.clientX - rect.left) / rect.width;
+        const cw = W - 36 - 16;
+        const xData = (_history.length > 1)
+          ? _history[0].epoch + xRel * (_history[_history.length - 1].epoch - _history[0].epoch)
+          : 0;
+        const nearest = _history.reduce((best, h) =>
+          Math.abs(h.epoch - xData) < Math.abs(best.epoch - xData) ? h : best,
+          _history[0] || { epoch: 0 }
+        );
+        if (!nearest) return;
+        const active = Object.entries(SERIES).filter(([, s]) => s.active);
+        const rows = active.map(([key, s]) => {
+          const map = { train: 'train_loss', val: 'val_loss', ppl: 'val_ppl', lr: 'lr', acc: 'acc' };
+          const v = nearest[map[key]];
+          return v != null ? `<div style="color:${s.color}">${s.label}: ${typeof v === 'number' ? v.toFixed(4) : v}</div>` : '';
+        }).join('');
+        tip.innerHTML = `<b>Эпоха ${nearest.epoch}</b>${rows}`;
+        tip.style.opacity = '1';
+        const tipLeft = Math.min(e.clientX - rect.left + 10, rect.width - 130);
+        const tipTop = Math.max(e.clientY - rect.top - 60, 4);
+        tip.style.left = tipLeft + 'px';
+        tip.style.top = tipTop + 'px';
+      };
+      svg.onmouseleave = () => { tip.style.opacity = '0'; };
+    }
+
+    // ── Аналитика ──────────────────────────────
+    function updateAnalytics(d) {
+      if (!_history || _history.length < 3) return;
+
+      const block = document.getElementById('analytics-block');
+      const icon = document.getElementById('an-icon');
+      const title = document.getElementById('an-title');
+      const verdict = document.getElementById('an-verdict');
+      const metrics = document.getElementById('an-metrics');
+      if (!block || !icon || !title || !verdict) return;
+
+      const h = _history;
+      const last = h[h.length - 1];
+      const prev = h[h.length - 2];
+      const best = d.best_val_loss;
+
+      // Тренд val loss за последние N эпох
+      const n = Math.min(5, h.length);
+      const trend = h.slice(-n).map(x => x.val_loss);
+      const delta = trend[trend.length - 1] - trend[0];
+      const improving = delta < -0.05;
+      const stuck = Math.abs(delta) < 0.02;
+      const overfitting = last.train_loss < last.val_loss * 0.6 && last.val_loss > best + 0.3;
+      const diverging = last.val_loss > prev.val_loss + 0.2;
+
+      // Сколько эпох не улучшался val
+      let epochsNoImprove = 0;
+      for (let i = h.length - 1; i >= 0; i--) {
+        if (Math.abs(h[i].val_loss - best) < 0.001) break;
+        epochsNoImprove++;
+      }
+
+      // Gap train/val
+      const gap = last.val_loss - last.train_loss;
+
+      let cls, ico, ttl, msg;
+
+      if (overfitting && epochsNoImprove >= 4) {
+        cls = 'danger'; ico = '🔴'; ttl = 'Переобучение';
+        msg = `Модель запомнила обучающие данные, но не обобщает. Val loss растёт уже ${epochsNoImprove} эпох, разрыв train/val = ${gap.toFixed(3)}. Рекомендуется остановить обучение — дальнейшее обучение не улучшит качество генерации.`;
+      } else if (diverging && epochsNoImprove >= 3) {
+        cls = 'danger'; ico = '🔴'; ttl = 'Val loss растёт';
+        msg = `Val loss увеличился на ${(last.val_loss - prev.val_loss).toFixed(3)} за последнюю эпоху. Это признак начала переобучения. Рекомендуется остановить обучение и использовать чекпоинт лучшей эпохи.`;
+      } else if (overfitting) {
+        cls = 'warn'; ico = '🟡'; ttl = 'Признаки переобучения';
+        msg = `Разрыв между train (${last.train_loss.toFixed(3)}) и val (${last.val_loss.toFixed(3)}) loss растёт. Ещё несколько эпох допустимо, затем остановка.`;
+      } else if (stuck && epochsNoImprove >= 5) {
+        cls = 'warn'; ico = '🟡'; ttl = 'Сходимость замедлилась';
+        msg = `Val loss не улучшается уже ${epochsNoImprove} эпох (плато ≈ ${best.toFixed(4)}). Возможно, модель достигла предела для данного датасета или нужно больше данных.`;
+      } else if (improving) {
+        cls = 'good'; ico = '🟢'; ttl = 'Продолжай обучение';
+        msg = `Val loss стабильно снижается (−${Math.abs(delta).toFixed(3)} за ${n} эпох). Лучший результат: ${best.toFixed(4)} на эпохе ${d.best_epoch}. Рекомендуется продолжать.`;
+      } else {
+        cls = 'good'; ico = '🟢'; ttl = 'Обучение идёт нормально';
+        msg = `Текущий val loss ${last.val_loss.toFixed(4)}, лучший ${best.toFixed(4)}. Нет явных признаков переобучения. Продолжай.`;
+      }
+
+      block.className = 'analytics-block ' + cls;
+      icon.textContent = ico;
+      title.textContent = ttl;
+      verdict.textContent = msg;
+      metrics.innerHTML = [
+        `<span class="analytics-metric">Train loss: <b>${last.train_loss.toFixed(4)}</b></span>`,
+        `<span class="analytics-metric">Val loss: <b>${last.val_loss.toFixed(4)}</b></span>`,
+        `<span class="analytics-metric">Лучший: <b>${best.toFixed(4)}</b></span>`,
+        `<span class="analytics-metric">Gap: <b>${gap.toFixed(3)}</b></span>`,
+        `<span class="analytics-metric">Без улучшений: <b>${epochsNoImprove} эп.</b></span>`,
+      ].join('');
+    }
+
+    // ── Epoch table ────────────────────────────
+    function updateEpochTable(history, bestLoss) {
+      const tb = document.getElementById('epoch-tbody'); if (!tb) return;
+      tb.innerHTML = '';
+      [...history].reverse().forEach(h => {
+        const best = h.val_loss === bestLoss;
+        const tr = document.createElement('tr');
+        if (best) tr.className = 'best';
+        tr.innerHTML = `<td>${h.epoch}</td><td style="color:#93c5fd">${fmt(h.train_loss)}</td><td style="color:#6ee7b7">${fmt(h.val_loss)}</td><td>${fmt(h.val_ppl, 1)}</td><td style="color:var(--muted)">${h.duration}</td><td>${best ? '<span class="badge-best">★</span>' : ''}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    // ── Core bars ──────────────────────────────
+    function renderCores(perCore) {
+      const g = document.getElementById('cores-grid'); if (!g || !perCore) return;
+      if (g.children.length !== perCore.length) {
+        g.innerHTML = perCore.map((_, i) => `<div class="core-bar"><div class="core-track"><div class="core-fill" id="cf${i}" style="height:0%"></div></div><div class="core-lbl">${i + 1}</div></div>`).join('');
+      }
+      perCore.forEach((v, i) => { const f = document.getElementById('cf' + i); if (f) f.style.height = Math.round(v) + '%'; });
+    }
+
+    // ── SSE ────────────────────────────────────
+    let _lastStatus = null, _batchCount = 0;
+
+    onSSE(function (d) {
+      const s = d.status;
+      toggle('b-idle', ['idle', 'waiting'].includes(s) || !s);
+      toggle('b-pause', s === 'paused');
+      toggle('b-done', s === 'finished');
+      toggle('b-err', s === 'error');
+      if (s === 'error') tx('b-err-msg', d.error);
+      if (s === 'finished') tx('b-done-sub', `Лучший val: ${fmt(d.best_val_loss)} | Эпох: ${d.current_epoch}`);
+
+      tx('k-ep', d.current_epoch || '—');
+      tx('k-ep-s', d.best_epoch ? `лучший: ${d.best_epoch}` : '');
+      tx('k-tl', fmt(d.train_loss, 4));
+      tx('k-tppl', d.train_ppl ? `PPL: ${fmt(d.train_ppl, 1)}` : '');
+      tx('k-vl', fmt(d.val_loss, 4));
+      tx('k-best', d.best_val_loss ? `Best: ${fmt(d.best_val_loss, 4)}` : '');
+      tx('k-el', d.elapsed_fmt || '—');
+      tx('k-eta', d.eta_fmt ? `~${d.eta_fmt}` : '');
+      tx('k-acc', d.acc != null ? d.acc + '%' : '—');
+      tx('k-lr', d.lr ? `LR: ${fmtLR(d.lr)}` : '');
+      tx('k-par', fmtK(d.total_params));
+      tx('k-voc', d.vocab_size ? `vocab: ${fmtK(d.vocab_size)}` : '');
+      tx('k-model', d.current_model_name || '—');
+      tx('k-model-s', d.current_version_num ? `v${d.current_version_num}` : '');
+
+      const ep = d.epoch_pct || 0, pb = document.getElementById('pb');
+      if (pb) pb.style.width = ep + '%';
+      tx('p-pct', ep + '%'); tx('p-ep', d.current_epoch || '?');
+      tx('p-bt', d.current_batch || '?'); tx('p-tot', d.n_train_batches || '?');
+      tx('prog-profile', d.params?.name || '');
+      tx('eta-ep', d.epoch_eta_fmt || '—');
+      tx('ram-l', d.ram_used ? `${d.ram_used}/${d.ram_total} ГБ` : '—');
+      tx('cpu-l', d.cpu_pct != null ? d.cpu_pct + '%' : '—');
+      tx('cur-loss', d.train_loss ? fmt(d.train_loss, 4) : '—');
+
+      tx('m-tl', fmt(d.train_loss)); tx('m-vl', fmt(d.val_loss));
+      tx('m-tp', fmt(d.train_ppl, 1)); tx('m-vp', fmt(d.val_ppl, 1));
+      tx('m-bv', fmt(d.best_val_loss)); tx('m-lr', fmtLR(d.lr));
+      tx('m-acc', d.acc != null ? d.acc + '%' : '—');
+      tx('m-ep', d.current_epoch && d.best_epoch ? `${d.current_epoch} / ${d.best_epoch}` : '—');
+
+      tx('cpu-tot', d.cpu_pct != null ? Math.round(d.cpu_pct) : '—');
+      tx('sys-ram', d.ram_used ? `${d.ram_used}/${d.ram_total} ГБ` : '—');
+      tx('sys-stor', d.storage_gb != null ? d.storage_gb + ' ГБ' : '—');
+
+      const circ = 201, dash = (Math.min(d.ram_pct || 0, 100) / 100) * circ;
+      const arc = document.getElementById('ram-arc'); if (arc) arc.setAttribute('stroke-dasharray', `${dash} ${circ}`);
+      tx('ram-pct-t', Math.round(d.ram_pct || 0) + '%');
+      tx('ram-gb-t', `${d.ram_used || 0} / ${d.ram_total || 0} ГБ`);
+      renderCores(d.cpu_core || []);
+
+      // Собираем батчевые данные каждые 5 батчей
+      const cb = d.current_batch || 0;
+      if (s === 'running' && d.train_loss && cb > 0) {
+        _batchCount++;
+        if (_batchCount % 5 === 0) {
+          const ep = (d.current_epoch || 1) - 1;
+          const nb = d.n_train_batches || 1;
+          // Дробная эпоха: ep + batch/n_batches, масштабируем * 100 для целых чисел
+          const xVal = Math.round((ep + cb / nb) * 100);
+          if (!_batchData.length || _batchData[_batchData.length - 1].x !== xVal) {
+            _batchData.push({ x: xVal, y: d.train_loss });
+            if (_batchData.length > 500) _batchData.shift();
+          }
+        }
+      }
+
+      // Обновляем историю и график
+      if (d.history?.length) {
+        _history = d.history;
+        drawChart();
+        updateEpochTable(d.history, d.best_val_loss);
+        updateAnalytics(d);
+      }
+
+      const SCL = { idle: 'sp-idle', running: 'sp-running', paused: 'sp-paused', finished: 'sp-finished', error: 'sp-error', waiting: 'sp-idle' };
+      const SLB = { idle: 'Ожидание', running: 'Обучение', paused: 'Пауза', finished: 'Готово', error: 'Ошибка' };
+      const sp = document.getElementById('nav-status'); if (sp) sp.className = 'status-pill ' + (SCL[s] || 'sp-idle');
+      tx('nav-status-txt', SLB[s] || s || '—');
+
+      // Скрываем admin-ссылки для обычных пользователей
+      checkAdminLinks();
+    });
+
+    let _adminChecked = false;
+    async function checkAdminLinks() {
+      if (_adminChecked) return;
+      _adminChecked = true;
+      const me = await apiGet('/api/auth/me');
+      if (me.role !== 'admin') {
+        document.getElementById('nav-train')?.classList.add('hidden');
+        document.getElementById('nav-settings')?.classList.add('hidden');
+      }
+    }
+
+    // Редроу при изменении размера окна
+    window.addEventListener('resize', drawChart);
+  </script>
+</body>
+
+</html>
