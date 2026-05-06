@@ -1,6 +1,6 @@
-"""backend/server.py — Lexis v4"""
+"""backend/server.py — Lexis v5"""
 
-import json, time, sys, os, re, threading, logging
+import json, time, sys, os, re, threading, logging, secrets
 from pathlib import Path
 from datetime import timedelta
 from functools import wraps
@@ -25,6 +25,7 @@ from core.config import (
     model_vocab_file,
     model_tokens_file,
     model_logs_dir,
+    STORAGE_DIR,
 )
 from core.db import (
     init_db,
@@ -60,6 +61,15 @@ from core.db import (
     add_model_sample,
     save_model_sample,
     delete_model_sample,
+    queue_add,
+    queue_status,
+    queue_next_waiting,
+    queue_set_processing,
+    queue_set_done,
+    queue_set_error,
+    queue_leave,
+    queue_cleanup,
+    queue_count_waiting,
 )
 from core.tokenizer import (
     build_and_save,
@@ -71,8 +81,6 @@ from core.tokenizer import (
 )
 from core.postprocess import (
     postprocess,
-    postprocess_selective,
-    postprocess_with_diff,
     deep_process,
     consciousness_generate,
     ConsciousnessConfig,
@@ -88,7 +96,7 @@ from core.state import (
 
 FRONTEND = ROOT_DIR / "frontend"
 app = Flask(__name__, static_folder=str(FRONTEND))
-app.secret_key = "lexis-v4-secret"
+app.secret_key = os.environ.get("LEXIS_SECRET", secrets.token_hex(32))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -112,17 +120,88 @@ _tokenize_progress = {
     "auto_params": None,
 }
 _trainer_lock = threading.Lock()
-_current_version_id = None  # версия текущего обучения
+_current_version_id = None
+
+# ── Online users tracking ────────────────────────────────────────────────────
+_online_lock = threading.Lock()
+_online_users: dict = {}  # {user_id: last_heartbeat_ts}
+ONLINE_TTL = 30  # секунд без пинга — считаем оффлайн
+
+
+def _touch_online(user_id: int):
+    with _online_lock:
+        _online_users[user_id] = time.time()
+
+
+def _online_count() -> int:
+    now = time.time()
+    with _online_lock:
+        return sum(1 for ts in _online_users.values() if now - ts < ONLINE_TTL)
+
+
+def _online_list() -> list:
+    now = time.time()
+    with _online_lock:
+        return [uid for uid, ts in _online_users.items() if now - ts < ONLINE_TTL]
+
+
+# ── Limits ───────────────────────────────────────────────────────────────────
+USER_WORD_LIMIT = 200
+ADMIN_WORD_LIMIT = 2000
+
+
+def _word_limit(role: str) -> int:
+    return ADMIN_WORD_LIMIT if role == "admin" else USER_WORD_LIMIT
+
+
+# ── Queue worker ─────────────────────────────────────────────────────────────
+_queue_worker_running = False
+
+
+def _start_queue_worker():
+    global _queue_worker_running
+    if _queue_worker_running:
+        return
+    _queue_worker_running = True
+    t = threading.Thread(target=_queue_loop, daemon=True, name="queue-worker")
+    t.start()
+
+
+def _queue_loop():
+    while True:
+        try:
+            task = queue_next_waiting()
+            if task:
+                queue_set_processing(task["request_id"])
+                try:
+                    params = json.loads(task["params"]) if task["params"] else {}
+                    result = _do_generate(params, task["prompt"])
+                    queue_set_done(
+                        task["request_id"], json.dumps(result, ensure_ascii=False)
+                    )
+                except Exception as e:
+                    log.error(f"Queue task error: {e}", exc_info=True)
+                    queue_set_error(task["request_id"], str(e))
+            queue_cleanup(max_age_sec=300)
+        except Exception as e:
+            log.error(f"Queue loop error: {e}")
+        time.sleep(0.5)
+
 
 init_db()
 MAX_FILE_MB = 50
+_start_queue_worker()
 
-# ── Auth ─────────────────────────────────────
+
+# ── Auth helpers ─────────────────────────────────────────────────────────────
 
 
 def get_current_user():
     token = request.cookies.get("token") or request.headers.get("X-Token")
-    return get_user_by_token(token)
+    user = get_user_by_token(token)
+    if user:
+        _touch_online(user["id"])
+    return user
 
 
 def auth_required(f):
@@ -151,7 +230,16 @@ def admin_required(f):
     return w
 
 
-# ── Pages ────────────────────────────────────
+def _get_ip():
+    return (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.headers.get("X-Real-IP", "")
+        or request.remote_addr
+        or ""
+    )
+
+
+# ── Pages ────────────────────────────────────────────────────────────────────
 
 
 @app.route("/")
@@ -179,7 +267,7 @@ def js_r(fn):
     return send_from_directory(FRONTEND / "js", fn)
 
 
-# ── Auth API ─────────────────────────────────
+# ── Auth API ─────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -191,10 +279,10 @@ def api_register():
         return jsonify({"error": "Имя минимум 2 символа"}), 400
     if len(p) < 4:
         return jsonify({"error": "Пароль минимум 4 символа"}), 400
-    result = register(u, p)
+    result = register(u, p, ip=_get_ip())
     if not result["ok"]:
         return jsonify(result), 400
-    lr = login(u, p)
+    lr = login(u, p, ip=_get_ip())
     resp = jsonify({"ok": True, "username": u, "role": lr["role"]})
     resp.set_cookie(
         "token", lr["token"], max_age=86400 * 30, httponly=True, samesite="Lax"
@@ -205,7 +293,8 @@ def api_register():
 @app.route("/api/auth/login", methods=["POST"])
 def api_login():
     d = request.json or {}
-    result = login(d.get("username", ""), d.get("password", ""))
+    ip = _get_ip()
+    result = login(d.get("username", ""), d.get("password", ""), ip=ip)
     if not result["ok"]:
         return jsonify(result), 401
     resp = jsonify({"ok": True, "username": result["username"], "role": result["role"]})
@@ -220,6 +309,10 @@ def api_logout():
     token = request.cookies.get("token")
     if token:
         logout(token)
+    user = get_current_user()
+    if user:
+        with _online_lock:
+            _online_users.pop(user["id"], None)
     resp = jsonify({"ok": True})
     resp.delete_cookie("token")
     return resp
@@ -236,11 +329,29 @@ def api_me():
             "username": user["username"],
             "user_id": user["id"],
             "role": user["role"],
+            "word_limit": _word_limit(user["role"]),
         }
     )
 
 
-# ── Models API ───────────────────────────────
+@app.route("/api/auth/heartbeat", methods=["POST"])
+def api_heartbeat():
+    user = get_current_user()
+    if user:
+        _touch_online(user["id"])
+        return jsonify({"ok": True, "online": _online_count()})
+    return jsonify({"ok": False}), 401
+
+
+# ── Online API ───────────────────────────────────────────────────────────────
+
+
+@app.route("/api/online")
+def api_online():
+    return jsonify({"count": _online_count(), "users": _online_list()})
+
+
+# ── Models API ───────────────────────────────────────────────────────────────
 
 
 @app.route("/api/models")
@@ -312,8 +423,7 @@ def api_delete_sample(sid):
 @app.route("/api/models/versions/<int:vid>/load", methods=["POST"])
 @admin_required
 def api_load_version(vid):
-    """Загружает конкретную версию/эпоху как текущую для генерации."""
-    import torch
+    import torch, shutil
     from core.db import get_conn
 
     conn = get_conn()
@@ -324,14 +434,11 @@ def api_load_version(vid):
     ckpt_path = row["checkpoint_path"]
     if not ckpt_path or not Path(ckpt_path).exists():
         return jsonify({"error": "Файл чекпоинта не найден"}), 404
-    # Копируем как best_model.pt
-    import shutil
-
     shutil.copy2(ckpt_path, str(CKPT_DIR / "best_model.pt"))
     return jsonify({"ok": True, "message": f"Версия {row['version_num']} загружена"})
 
 
-# ── Chats ────────────────────────────────────
+# ── Chats ────────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/chats")
@@ -379,12 +486,12 @@ def api_messages(cid):
     return jsonify(get_messages(cid))
 
 
-# ── Generate ─────────────────────────────────
+# ── Model loading ─────────────────────────────────────────────────────────────
 
 
 def _load_model(checkpoint_path: str = None):
     import torch
-    from core.model import build_auto
+    from core.model import build as build_model
 
     path = Path(checkpoint_path) if checkpoint_path else CKPT_DIR / "best_model.pt"
     if not path.exists():
@@ -392,74 +499,122 @@ def _load_model(checkpoint_path: str = None):
     ckpt = torch.load(str(path), map_location="cpu", weights_only=True)
     params = ckpt["params"]
     ckpt_vs = ckpt["vocab_size"]
-    # build_auto сам определяет legacy/новую архитектуру и загружает веса (strict=False)
-    model = build_auto(ckpt_vs, params, state_dict=ckpt["model"])
-    model.eval()  # build_auto уже вызывает eval, но оставим для надёжности
+    model = build_model(ckpt_vs, params)
+    model.load_state_dict(ckpt["model"], strict=True)
+    model.eval()
     vocab_dir = path.parent.parent if path.parent.name == "checkpoints" else None
     vocab = load_vocab(base_dir=vocab_dir)
     return model, vocab, ckpt_vs
 
 
-@app.route("/api/chats/<int:cid>/generate", methods=["POST"])
-@auth_required
-def api_generate(cid):
-    d = request.json or {}
-    seed = d.get("seed", d.get("prompt", "")).strip()
-    n_words = max(
-        3,
-        min(
-            2000 if g.user.get("role") == "admin" else 200,
-            int(d.get("num_words", d.get("n_words", 60))),
-        ),
-    )
-    temp = float(d.get("temperature", 1.0))
-    top_k = int(d.get("top_k", 50))
-    top_p = float(d.get("top_p", 0.92))
-    use_dpa = bool(d.get("deep_process", False))
-    use_consciousness = bool(d.get("consciousness", False))
-    inspector_mode = bool(d.get("inspector_mode", False))
-    rep_pen = float(d.get("repetition_penalty", 1.3))
-    no_rep = int(d.get("no_repeat_ngram", 3))
-    active_agents = d.get("active_agents")  # list[str] or None
-    consciousness_cfg = d.get("consciousness_config", {})
-    ckpt_path = d.get("checkpoint_path")
-    version_id = d.get("version_id")
+# ── Core generation logic ─────────────────────────────────────────────────────
 
-    is_admin = g.user.get("role") == "admin"
-    if use_consciousness and not is_admin:
-        use_consciousness = False
+
+def _do_generate(params: dict, prompt_text: str) -> dict:
+    """
+    Центральная функция генерации. Используется и напрямую, и из очереди.
+    Режимы: basic | dpa | extra_thinking
+    После DPA и extra_thinking применяются все 9 агентов.
+    Гарантирует сохранение количества слов близко к target_words.
+    """
+    seed = prompt_text or ""
+    n_words = params.get("num_words", 60)
+    temp = float(params.get("temperature", 1.0))
+    top_k = int(params.get("top_k", 50))
+    top_p = float(params.get("top_p", 0.92))
+    mode = params.get("mode", "basic")
+    rep_pen = float(params.get("repetition_penalty", 1.3))
+    no_rep = int(params.get("no_repeat_ngram", 3))
+    ckpt_path = params.get("checkpoint_path")
+    version_id = params.get("version_id")
+
+    # Extra thinking params
+    et_hypotheses = int(params.get("et_hypotheses", 5))
+    et_passes = int(params.get("et_passes", 2))
 
     if version_id is not None and ckpt_path is None:
         version = get_model_version_by_id(int(version_id))
-        if not version or not version.get("checkpoint_path"):
-            return jsonify({"error": "Не найдена указанная версия модели"}), 404
-        ckpt_path = version["checkpoint_path"]
+        if version and version.get("checkpoint_path"):
+            ckpt_path = version["checkpoint_path"]
 
-    try:
-        model, vocab, ckpt_vs = _load_model(ckpt_path)
+    model, vocab, ckpt_vs = _load_model(ckpt_path)
+    w2i = vocab["w2i"]
+    i2w = vocab["i2w"]
+    bos = w2i.get("<BOS>", 1)
+    eos = w2i.get("<EOS>", 2)
+
+    seed_tokens = tokenize_text(seed) if seed else []
+    new_words = [t for t in seed_tokens if t not in w2i]
+    base_dir = Path(ckpt_path).parent.parent if ckpt_path else None
+    if new_words:
+        extend_vocab_with_words(new_words, base_dir=base_dir)
+        vocab = load_vocab(base_dir=base_dir)
         w2i = vocab["w2i"]
         i2w = vocab["i2w"]
-        bos = w2i.get("<BOS>", 1)
-        eos = w2i.get("<EOS>", 2)
-        seed_tokens = tokenize_text(seed) if seed else []
-        new_words = [t for t in seed_tokens if t not in w2i]
-        base_dir = Path(ckpt_path).parent.parent if ckpt_path else None
-        if new_words:
-            extend_vocab_with_words(new_words, base_dir=base_dir)
-            vocab = load_vocab(base_dir=base_dir)
-            w2i = vocab["w2i"]
-            i2w = vocab["i2w"]
-        prompt = [w2i.get(t, bos) for t in seed_tokens] or [bos]
 
-        corrections = get_all_corrections()
-        extra_corrections = d.get("corrections")
-        if extra_corrections and isinstance(extra_corrections, dict):
-            corrections = {**corrections, **extra_corrections}
+    prompt = [w2i.get(t, bos) for t in seed_tokens] or [bos]
+    corrections = get_all_corrections()
 
-        def generate_ids(prompt_tokens, count):
-            return model.generate(
-                prompt_tokens,
-                max_new=count,
+    def _gen_ids(p_tokens, count):
+        # Генерируем с 30% запасом чтобы после постобработки осталось нужное кол-во
+        safe_count = max(count, int(count * 1.35))
+        return model.generate(
+            p_tokens,
+            max_new=safe_count,
+            temperature=temp,
+            top_k=top_k,
+            top_p=top_p,
+            eos_id=eos,
+            vocab_size=ckpt_vs,
+            repetition_penalty=rep_pen,
+            no_repeat_ngram=no_rep,
+            min_new_tokens=min(20, count),
+        )
+
+    def _ids_to_raw(ids, prefix_tokens):
+        words = [i2w.get(i, "") for i in ids if i2w.get(i, "")]
+        prefix_str = " ".join(prefix_tokens) + " " if prefix_tokens else ""
+        return (prefix_str + " ".join(words)).strip()
+
+    def _trim_to_words(text: str, target: int) -> str:
+        """Обрезает текст до target слов, заканчивая на границе предложения."""
+        wds = text.split()
+        if len(wds) <= target:
+            return text
+        # Ищем конец предложения ближайший к target
+        sub = " ".join(wds[: target + 10])
+        parts = re.split(r"(?<=[.!?])\s+", sub)
+        result = []
+        count = 0
+        for part in parts:
+            pw = len(part.split())
+            if count + pw > target and count >= int(target * 0.8):
+                break
+            result.append(part)
+            count += pw
+        if not result:
+            result = [" ".join(wds[:target])]
+        out = " ".join(result)
+        if out and out[-1] not in ".!?":
+            out += "."
+        return out
+
+    def _ensure_word_count(text: str, target: int, p_tokens, max_tries=4) -> str:
+        """
+        Дополняет текст если слов меньше target.
+        Никогда не усекает ниже 80% от target.
+        """
+        for _ in range(max_tries):
+            wc = len(text.split())
+            if wc >= int(target * 0.85):
+                break
+            deficit = target - wc + int(target * 0.2)
+            ctx_tokens = [w2i.get(t, bos) for t in tokenize_text(text)][
+                -model.seq_len :
+            ] or [bos]
+            more_ids = model.generate(
+                ctx_tokens,
+                max_new=deficit,
                 temperature=temp,
                 top_k=top_k,
                 top_p=top_p,
@@ -467,160 +622,240 @@ def api_generate(cid):
                 vocab_size=ckpt_vs,
                 repetition_penalty=rep_pen,
                 no_repeat_ngram=no_rep,
-                min_new_tokens=min(10, count),
+                min_new_tokens=max(5, deficit // 2),
             )
+            more_words = [i2w.get(i, "") for i in more_ids if i2w.get(i, "")]
+            if not more_words:
+                break
+            text = (text.rstrip(".!?") + " " + " ".join(more_words)).strip()
+            text = postprocess(text, corrections)
+        return text
 
-        agent_diff = []
-        consciousness_data = {}
+    # ── Режимы ───────────────────────────────────────────────────────────────
 
-        # ── Consciousness mode ──
-        if use_consciousness:
-            cfg = ConsciousnessConfig(
-                n_hypotheses=int(consciousness_cfg.get("n_hypotheses", 5)),
-                refine_passes=int(consciousness_cfg.get("refine_passes", 2)),
-            )
-            result = consciousness_generate(
+    extra_data = {}
+
+    if mode == "extra_thinking":
+        cfg = ConsciousnessConfig(
+            n_hypotheses=et_hypotheses,
+            refine_passes=et_passes,
+        )
+        result_data = consciousness_generate(
+            model,
+            vocab,
+            prompt,
+            max_new=int(n_words * 1.5),
+            config=cfg,
+            ckpt_vs=ckpt_vs,
+            corrections=corrections,
+        )
+        raw_text = result_data["text"]
+        # После Extra thinking — применяем все 9 агентов
+        text = postprocess(raw_text, corrections)
+        text = _ensure_word_count(text, n_words, prompt)
+        text = _trim_to_words(text, int(n_words * 1.1))
+        extra_data = {
+            "hypotheses": result_data.get("hypotheses", []),
+            "scores": result_data.get("scores", []),
+            "best": result_data.get("best", ""),
+            "consensus": result_data.get("consensus", ""),
+            "stats": result_data.get("stats", {}),
+        }
+        raw = result_data.get("best", raw_text)
+
+    elif mode == "dpa":
+        gen_ids = _gen_ids(prompt, n_words)
+        raw = _ids_to_raw(gen_ids, seed_tokens)
+        # DPA
+        if len(raw.split()) >= 20:
+            dpa_text = deep_process(
+                raw,
                 model,
                 vocab,
-                prompt,
-                max_new=n_words,
-                config=cfg,
+                temperature=temp,
+                top_k=top_k,
+                top_p=top_p,
                 ckpt_vs=ckpt_vs,
                 corrections=corrections,
             )
-            text = result["text"]
-            raw = " ".join(
-                [
-                    i2w.get(i, "")
-                    for i in generate_ids(prompt, n_words)
-                    if i2w.get(i, "")
-                ]
-            )
-            consciousness_data = result
-
         else:
-            # ── Normal / DPA mode ──
-            def make_text(raw_text: str) -> tuple:
-                if use_dpa and len(raw_text.split()) >= 30:
-                    processed = deep_process(
-                        raw_text,
-                        model,
-                        vocab,
-                        temperature=temp,
-                        top_k=top_k,
-                        top_p=top_p,
-                        ckpt_vs=ckpt_vs,
-                        corrections=corrections,
-                    )
-                    return processed, []
-                if inspector_mode:
-                    result = postprocess_with_diff(raw_text, active_agents, corrections)
-                    return result["text"], result.get("agent_diff", [])
-                if active_agents is not None:
-                    return (
-                        postprocess_selective(raw_text, active_agents, corrections),
-                        [],
-                    )
-                return postprocess(raw_text, corrections), []
+            dpa_text = postprocess(raw, corrections)
+        # После DPA — все 9 агентов сверху
+        text = postprocess(dpa_text, corrections)
+        text = _ensure_word_count(text, n_words, prompt)
+        text = _trim_to_words(text, int(n_words * 1.1))
 
-            gen_ids = generate_ids(prompt, n_words)
-            words = [i2w.get(i, "") for i in gen_ids if i2w.get(i, "")]
-            raw = ((" ".join(seed_tokens) + " ") if seed_tokens else "") + " ".join(
-                words
-            )
-            text, agent_diff = make_text(raw)
+    else:
+        # basic — только агенты
+        gen_ids = _gen_ids(prompt, n_words)
+        raw = _ids_to_raw(gen_ids, seed_tokens)
+        text = postprocess(raw, corrections)
+        text = _ensure_word_count(text, n_words, prompt)
+        text = _trim_to_words(text, int(n_words * 1.1))
 
-            target_min = max(1, int(n_words * 0.99))
-            target_max = int(n_words * 1.01) + 1
-            attempt = 0
-            while attempt < 5:
-                count = len(text.split())
-                if target_min <= count <= target_max:
-                    break
-                if count < target_min:
-                    extra = max(1, min(n_words - count, 200))
-                    prompt_tokens = [w2i.get(t, bos) for t in tokenize_text(text)] or [
-                        bos
-                    ]
-                    more_ids = generate_ids(prompt_tokens, extra)
-                    extra_words = [i2w.get(i, "") for i in more_ids if i2w.get(i, "")]
-                    raw = (text + " " + " ".join(extra_words)).strip()
-                    text, agent_diff = make_text(raw)
-                    attempt += 1
-                else:
-                    break
+    return {
+        "ok": True,
+        "text": text,
+        "raw": raw,
+        "word_count": len(text.split()),
+        "target_words": n_words,
+        **extra_data,
+    }
 
+
+# ── Generate API ──────────────────────────────────────────────────────────────
+
+
+@app.route("/api/chats/<int:cid>/generate", methods=["POST"])
+@auth_required
+def api_generate(cid):
+    d = request.json or {}
+    role = g.user.get("role", "user")
+    limit = _word_limit(role)
+    n_words = max(3, min(limit, int(d.get("num_words", 60))))
+
+    mode = d.get("mode", "basic")
+
+    # Extra thinking доступен только админу
+    if mode == "extra_thinking" and role != "admin":
+        return jsonify({"error": "Extra Thinking доступен только администратору"}), 403
+
+    params = {
+        "num_words": n_words,
+        "temperature": float(d.get("temperature", 1.0)),
+        "top_k": int(d.get("top_k", 50)),
+        "top_p": float(d.get("top_p", 0.92)),
+        "mode": mode,
+        "repetition_penalty": float(d.get("repetition_penalty", 1.3)),
+        "no_repeat_ngram": int(d.get("no_repeat_ngram", 3)),
+        "checkpoint_path": d.get("checkpoint_path"),
+        "version_id": d.get("version_id"),
+        "et_hypotheses": int(d.get("et_hypotheses", 5)),
+        "et_passes": int(d.get("et_passes", 2)),
+    }
+    seed = d.get("seed", "").strip()
+
+    # Сразу пробуем генерацию (очередь строится через polling)
+    try:
+        result = _do_generate(params, seed)
         if seed:
             add_message(cid, "user", seed)
-        bot_mid = add_message(cid, "bot", text)
-
-        resp = {
-            "ok": True,
-            "text": text,
-            "msg_id": bot_mid,
-            "raw": (
-                raw
-                if not use_consciousness
-                else consciousness_data.get("consensus", text)
-            ),
-            "word_count": len(text.split()),
-            "target_words": n_words,
-        }
-        if inspector_mode or use_consciousness:
-            resp["agent_diff"] = agent_diff
-        if use_consciousness:
-            resp["hypotheses"] = consciousness_data.get("hypotheses", [])
-            resp["scores"] = consciousness_data.get("scores", [])
-            resp["best"] = consciousness_data.get("best", text)
-            resp["stats"] = consciousness_data.get("stats", {})
-        return jsonify(resp)
+        bot_mid = add_message(cid, "bot", result["text"])
+        result["msg_id"] = bot_mid
+        return jsonify(result)
     except Exception as e:
-        log.error(f"Generate: {e}", exc_info=True)
+        log.error(f"Generate error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/generate/queue", methods=["POST"])
+@auth_required
+def api_queue_generate():
+    """
+    Поставить запрос в очередь. Возвращает request_id.
+    Клиент поллит /api/generate/status/<request_id>.
+    """
+    d = request.json or {}
+    role = g.user.get("role", "user")
+    limit = _word_limit(role)
+    n_words = max(3, min(limit, int(d.get("num_words", 60))))
+    mode = d.get("mode", "basic")
+    if mode == "extra_thinking" and role != "admin":
+        return jsonify({"error": "Extra Thinking доступен только администратору"}), 403
+
+    params = {
+        "num_words": n_words,
+        "temperature": float(d.get("temperature", 1.0)),
+        "top_k": int(d.get("top_k", 50)),
+        "top_p": float(d.get("top_p", 0.92)),
+        "mode": mode,
+        "repetition_penalty": float(d.get("repetition_penalty", 1.3)),
+        "no_repeat_ngram": int(d.get("no_repeat_ngram", 3)),
+        "checkpoint_path": d.get("checkpoint_path"),
+        "version_id": d.get("version_id"),
+        "et_hypotheses": int(d.get("et_hypotheses", 5)),
+        "et_passes": int(d.get("et_passes", 2)),
+    }
+    rid = secrets.token_urlsafe(16)
+    seed = d.get("seed", "").strip()
+    pos = queue_add(g.user["id"], rid, seed, params)
+    return jsonify(
+        {
+            "ok": True,
+            "request_id": rid,
+            "position": pos,
+            "queue_size": queue_count_waiting(),
+        }
+    )
+
+
+@app.route("/api/generate/status/<rid>")
+@auth_required
+def api_queue_status(rid):
+    s = queue_status(rid)
+    if not s.get("found"):
+        return jsonify({"error": "Задача не найдена"}), 404
+    if s["status"] == "done" and s.get("result"):
+        try:
+            s["result"] = json.loads(s["result"])
+        except Exception:
+            pass
+    s["queue_total"] = queue_count_waiting()
+    return jsonify(s)
+
+
+@app.route("/api/generate/leave/<rid>", methods=["DELETE"])
+@auth_required
+def api_queue_leave(rid):
+    queue_leave(rid, g.user["id"])
+    return jsonify({"ok": True})
+
+
+# ── Word alternatives (batched) ───────────────────────────────────────────────
 
 
 @app.route("/api/word/alternatives", methods=["POST"])
 @auth_required
 def api_word_alternatives():
+    import torch, torch.nn.functional as F
+
     d = request.json or {}
     context = d.get("context", "").strip()
     word = d.get("word", "").strip()
-    n_alts = int(d.get("n", 5))
+    n_alts = int(d.get("n", 6))
     try:
         model, vocab, ckpt_vs = _load_model()
         w2i = vocab["w2i"]
         i2w = vocab["i2w"]
         bos = w2i.get("<BOS>", 1)
-        eos = w2i.get("<EOS>", 2)
         ctx_tokens = tokenize_text(context) if context else []
-        prompt = [w2i.get(t, bos) for t in ctx_tokens[-30:]] or [bos]
-        alts = set()
-        for _ in range(25):
+        prompt = [w2i.get(t, bos) for t in ctx_tokens[-40:]] or [bos]
+
+        # Батч-генерация: один forward pass → topK токенов
+        inp = torch.tensor([prompt], dtype=torch.long).clamp(0, ckpt_vs - 1)
+        with torch.no_grad():
+            logits = model(inp)[0, -1, :ckpt_vs].float()
+        logits = logits / 1.3  # temperature
+        topk_v, topk_i = torch.topk(logits, min(100, ckpt_vs))
+        probs = F.softmax(topk_v, dim=-1)
+
+        alts = []
+        seen = {word.lower()}
+        for prob_v, tid in zip(probs.tolist(), topk_i.tolist()):
+            w = i2w.get(tid, "")
+            if w and w.lower() not in seen and re.match(r"[а-яёa-z]", w, re.IGNORECASE):
+                alts.append({"word": w, "prob": round(prob_v, 4)})
+                seen.add(w.lower())
             if len(alts) >= n_alts:
                 break
-            gen = model.generate(
-                prompt,
-                max_new=1,
-                temperature=1.3,
-                top_k=30,
-                top_p=0.95,
-                eos_id=eos,
-                vocab_size=ckpt_vs,
-                repetition_penalty=1.2,
-                no_repeat_ngram=2,
-                min_new_tokens=1,
-            )
-            if gen:
-                w = i2w.get(gen[0], "")
-                if w and w != word and re.match(r"[а-яёa-z]", w):
-                    alts.add(w)
-        return jsonify({"ok": True, "alternatives": list(alts)[:n_alts], "word": word})
+
+        return jsonify({"ok": True, "alternatives": alts, "word": word})
     except Exception as e:
         log.error(f"Alternatives: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
-# ── Corrections ──────────────────────────────
+# ── Corrections ───────────────────────────────────────────────────────────────
 
 
 @app.route("/api/corrections")
@@ -645,7 +880,7 @@ def api_corrections_add():
     return jsonify({"ok": True})
 
 
-# ── Datasets ─────────────────────────────────
+# ── Datasets ──────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/datasets/upload", methods=["POST"])
@@ -682,19 +917,19 @@ def api_datasets_list():
     return jsonify(get_user_datasets(g.user["id"]))
 
 
-# ── Upload .pt ───────────────────────────────
+# ── Upload .pt ────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/model/upload", methods=["POST"])
 @admin_required
 def api_model_upload():
+    import torch, shutil
+
     if "file" not in request.files:
         return jsonify({"error": "Нет файла"}), 400
     f = request.files["file"]
     if not f.filename.endswith(".pt"):
         return jsonify({"error": "Только .pt файлы"}), 400
-    import torch, shutil
-
     content = f.read()
     tmp_path = CKPT_DIR / "upload_tmp.pt"
     tmp_path.write_bytes(content)
@@ -718,7 +953,7 @@ def api_model_upload():
         return jsonify({"error": f"Ошибка чтения: {e}"}), 400
 
 
-# ── Tokenize ─────────────────────────────────
+# ── Tokenize ──────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/tokenize/start", methods=["POST"])
@@ -794,7 +1029,7 @@ def api_tokenize_status():
     )
 
 
-# ── Train ────────────────────────────────────
+# ── Train ─────────────────────────────────────────────────────────────────────
 
 
 def _trainer_body(params, vocab_size, n_tokens, n_batches, version_id, model_slug):
@@ -815,7 +1050,6 @@ def api_train_start():
     with _trainer_lock:
         if _trainer_thread and _trainer_thread.is_alive():
             return jsonify({"error": "Обучение уже запущено"}), 400
-        from core.config import STORAGE_DIR
         import shutil
 
         d = request.json or {}
@@ -823,7 +1057,6 @@ def api_train_start():
         model_name = d.get("model_name", "").strip()
         notes = d.get("notes", "")
 
-        # Создать новую модель или версию существующей
         if not model_id:
             if not model_name:
                 model_name = f"Модель {int(time.time())}"
@@ -883,13 +1116,13 @@ def api_train_reset():
     for p in CKPT_DIR.glob("epoch_*.pt"):
         try:
             p.unlink()
-        except:
+        except Exception:
             pass
     from core.config import STATE_FILE
 
     try:
         STATE_FILE.unlink()
-    except:
+    except Exception:
         pass
     try:
         from core.db import get_conn
@@ -898,7 +1131,7 @@ def api_train_reset():
         conn.execute("DELETE FROM training_epochs")
         conn.commit()
         conn.close()
-    except:
+    except Exception:
         pass
     return jsonify({"ok": True})
 
@@ -921,6 +1154,8 @@ def api_train_state():
             ),
             "trainer_alive": bool(_trainer_thread and _trainer_thread.is_alive()),
             "current_version_id": _current_version_id,
+            "online_count": _online_count(),
+            "queue_size": queue_count_waiting(),
         }
     )
     if _current_version_id is not None:
@@ -948,7 +1183,7 @@ def api_admin_logs():
     return jsonify({"lines": lines[-n:]})
 
 
-# ── Config ───────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────────
 
 
 @app.route("/api/config")
@@ -967,7 +1202,7 @@ def api_config_set():
     return jsonify({"ok": True})
 
 
-# ── SSE ──────────────────────────────────────
+# ── SSE ───────────────────────────────────────────────────────────────────────
 
 
 def _fmt(sec) -> str:
@@ -1007,6 +1242,8 @@ def _sse_gen():
                 "epoch_pct": round(cb / nb * 100, 1),
                 "trainer_alive": bool(_trainer_thread and _trainer_thread.is_alive()),
                 "current_version_id": _current_version_id,
+                "online_count": _online_count(),
+                "queue_size": queue_count_waiting(),
             }
             if _current_version_id is not None:
                 version = get_model_version_by_id(_current_version_id)
@@ -1014,9 +1251,9 @@ def _sse_gen():
                     payload["current_model_name"] = version.get("model_name")
                     payload["current_version_num"] = version.get("version_num")
                     payload["current_model_id"] = version.get("model_id")
-            yield f"data: {json.dumps(payload,ensure_ascii=False,default=str)}\n\n"
+            yield f"data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error':str(e)})}\n\n"
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
         time.sleep(1.5)
 
 
@@ -1025,44 +1262,11 @@ def stream():
     return Response(
         _sse_gen(),
         mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Access-Control-Allow-Origin": "*",
-        },
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-# ── Main ─────────────────────────────────────
-
-
-def main():
-    cfg = load()
-    port = cfg.get("server_port", 5000)
-    psutil.cpu_percent(interval=0.3)
-    print(f"\n  ╔══════════════════════════════════════════╗")
-    print(f"  ║         LEXIS — Text Generation          ║")
-    print(f"  ╠══════════════════════════════════════════╣")
-    print(f"  ║  http://localhost:{port:<5}                  ║")
-    print(f"  ║  Локальная сеть: http://<ваш_IP>:{port}  ║")
-    print(f"  ║  Ctrl+C для выхода                       ║")
-    print(f"  ╚══════════════════════════════════════════╝\n")
-    try:
-        import webbrowser
-
-        webbrowser.open(f"http://localhost:{port}")
-    except:
-        pass
-    app.run(host="0.0.0.0", port=port, threaded=True, debug=True, use_reloader=False)
-
-
-if __name__ == "__main__":
-    main()
-
-
-# ═══════════════════════════════════════════════
-#  Epoch management API
-# ═══════════════════════════════════════════════
+# ── Epoch management ──────────────────────────────────────────────────────────
 
 from core.db import (
     validate_epoch,
@@ -1076,7 +1280,6 @@ from core.db import (
 
 @app.route("/api/models/versions/<int:vid>/epochs/rich")
 def api_epochs_rich(vid):
-    """Все эпохи версии с полями validated/custom_name/ckpt_deleted."""
     return jsonify(get_all_epochs_rich(vid))
 
 
@@ -1104,14 +1307,11 @@ def api_delete_epoch_ckpt(vid, epoch):
 
 @app.route("/api/models/versions/<int:vid>/epochs/<int:epoch>/samples")
 def api_epoch_samples(vid, epoch):
-    from core.db import get_model_samples
-
     return jsonify(get_model_samples(vid, epoch=epoch))
 
 
 @app.route("/api/models/families")
 def api_model_families():
-    """Семейства со всеми версиями и эпохами — для чата."""
     return jsonify(get_models_with_versions())
 
 
@@ -1119,3 +1319,30 @@ def api_model_families():
 def api_epoch_ckpt_path(vid, epoch):
     path = get_epoch_ckpt_path(vid, epoch)
     return jsonify({"path": path})
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+
+def main():
+    cfg = load()
+    port = cfg.get("server_port", 5000)
+    psutil.cpu_percent(interval=0.3)
+    print(f"\n  ╔══════════════════════════════════════════╗")
+    print(f"  ║         LEXIS v5 — Text Generation       ║")
+    print(f"  ╠══════════════════════════════════════════╣")
+    print(f"  ║  http://localhost:{port:<5}                  ║")
+    print(f"  ║  Локальная сеть: http://<ваш_IP>:{port}  ║")
+    print(f"  ║  Ctrl+C для выхода                       ║")
+    print(f"  ╚══════════════════════════════════════════╝\n")
+    try:
+        import webbrowser
+
+        webbrowser.open(f"http://localhost:{port}")
+    except Exception:
+        pass
+    app.run(host="0.0.0.0", port=port, threaded=True, debug=False, use_reloader=False)
+
+
+if __name__ == "__main__":
+    main()

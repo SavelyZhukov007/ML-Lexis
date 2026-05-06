@@ -272,7 +272,15 @@
         <a class="nav-link admin-only hidden" href="/settings.html">⚙️ Настройки</a>
       </div>
       <div class="nav-right">
+        <div class="online-badge" id="online-badge" title="Пользователей онлайн">
+          <span class="dot"></span><span class="cnt" id="online-count">1</span><span>онлайн</span>
+        </div>
+        <div class="queue-badge hidden" id="queue-badge" title="Очередь генерации">
+          ⏳ <span id="queue-count">0</span> в очереди
+        </div>
         <div class="nav-user"><span class="nav-user-dot"></span><span id="nav-username">—</span></div>
+        <span class="tag tag-muted" id="limit-badge" style="font-size:11px" title="Лимит слов на генерацию">200
+          сл.</span>
         <button class="btn btn-ghost btn-sm" onclick="doLogout()">Выйти</button>
       </div>
     </nav>
@@ -366,14 +374,39 @@
               <button class="btn btn-ghost btn-xs" onclick="setPreset(0.6,20,0.8,1.3)">Точный</button>
               <button class="btn btn-ghost btn-xs" onclick="setPreset(1.0,50,0.92,1.3)">Норм</button>
               <button class="btn btn-ghost btn-xs" onclick="setPreset(1.5,100,0.98,1.2)">Хаос</button>
-              <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"
-                  title="Deep Processing: пошаговое уточнение каждого слова. Мин. 100 слов.">
-                  <input type="checkbox" id="dpa-toggle" style="width:14px;height:14px;accent-color:var(--accent)"
-                    onchange="onDpaToggle()">
-                  <span style="color:var(--accent);font-weight:700">DPA</span>
-                  <span style="font-size:10px;color:var(--muted2)">(100+ слов)</span>
-                </label>
+              <span class="text-xs text-muted" style="margin-left:auto">Лимит: <b id="limit-display">200</b> сл.</span>
+            </div>
+            <!-- Режим постпроцессинга -->
+            <div style="margin-bottom:8px">
+              <div class="section-title" style="margin-bottom:6px">Постпроцессинг</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="mode-btn active" id="mode-btn-basic" onclick="setMode('basic')">
+                  <span class="mode-icon">⚡</span> Базовый (агенты)
+                </button>
+                <button class="mode-btn" id="mode-btn-dpa" onclick="setMode('dpa')">
+                  <span class="mode-icon">🔬</span> DPA
+                </button>
+                <button class="mode-btn admin-mode hidden" id="mode-btn-et" onclick="setMode('extra_thinking')">
+                  <span class="mode-icon">🧠</span> Extra Thinking
+                </button>
+              </div>
+              <!-- ET params (только для ET режима) -->
+              <div id="et-params"
+                style="display:none;margin-top:10px;padding:10px;background:var(--bg-sunken);border-radius:var(--radius-sm);border:1px solid var(--border-subtle)">
+                <div class="param-row">
+                  <span class="param-label" title="Количество параллельных гипотез">Гипотезы N</span>
+                  <input type="range" class="param-slider" id="p-et-hyp" min="3" max="12" value="5"
+                    oninput="syncParam('p-et-hyp','n-et-hyp')">
+                  <input type="number" class="param-num-inp" id="n-et-hyp" value="5" min="3" max="12" style="width:48px"
+                    oninput="syncParam('n-et-hyp','p-et-hyp')">
+                </div>
+                <div class="param-row" style="margin-top:4px">
+                  <span class="param-label" title="Итераций рефайна (DPA-проходы)">Passes (рефайн)</span>
+                  <input type="range" class="param-slider" id="p-et-pass" min="1" max="5" value="2"
+                    oninput="syncParam('p-et-pass','n-et-pass')">
+                  <input type="number" class="param-num-inp" id="n-et-pass" value="2" min="1" max="5" style="width:48px"
+                    oninput="syncParam('n-et-pass','p-et-pass')">
+                </div>
               </div>
             </div>
             <div class="chat-input-row">
@@ -632,23 +665,45 @@
     function closeWordPopup() { const p = $('word-popup'); if (p) { p.style.display = 'none'; p.classList.add('hidden'); } }
     document.addEventListener('click', () => closeWordPopup());
 
+    // ── Mode ──
+    let _currentMode = 'basic';
+    let _wordLimit = 200;
+    function setMode(m) {
+      _currentMode = m;
+      ['basic', 'dpa', 'et'].forEach(k => {
+        const b = document.getElementById(`mode-btn-${k}`);
+        if (b) b.classList.toggle('active', k === m || (k === 'et' && m === 'extra_thinking'));
+      });
+      const etP = $('et-params'); if (etP) etP.style.display = (m === 'extra_thinking') ? 'block' : 'none';
+    }
+    function syncParam(srcId, dstId) { const s = document.getElementById(srcId), d = document.getElementById(dstId); if (s && d) d.value = s.value; }
+    function updateWordLimitUI(limit) {
+      _wordLimit = limit;
+      const lbl = $('limit-display'); if (lbl) lbl.textContent = limit;
+      const badge = $('limit-badge'); if (badge) badge.textContent = limit + ' сл.';
+      const sl = $('p-words'), ni = $('n-words');
+      if (sl) { sl.max = limit; if (parseInt(sl.value) > limit) sl.value = Math.min(limit, 200); }
+      if (ni) { ni.max = limit; if (parseInt(ni.value) > limit) ni.value = Math.min(limit, 200); }
+    }
+
     // ── Generate ──
     async function sendMessage() {
       if (_generating || !_currentChatId) return;
       const inp = $('chat-input'); const seed = inp?.value.trim() || ''; inp.value = ''; autoResize(inp);
-      const dpa = !!$('dpa-toggle')?.checked;
-      const numWords = parseInt($('p-words')?.value || 60);
-      if (dpa && numWords < 100) { showToast('DPA требует минимум 100 слов'); return; }
+      const numWordsRaw = parseInt($('p-words')?.value || 60);
+      const numWords = Math.min(numWordsRaw, _wordLimit);
+      if (_currentMode === 'extra_thinking' && numWords < 20) { showToast('Extra Thinking требует минимум 20 слов'); return; }
       const params = {
         seed, num_words: numWords,
         temperature: parseFloat($('n-temp')?.value || 1.0),
         top_k: parseInt($('n-topk')?.value || 50),
         top_p: parseFloat($('n-topp')?.value || 0.92),
-        deep_process: dpa,
+        mode: _currentMode,
         repetition_penalty: parseFloat($('n-pen')?.value || 1.3),
         no_repeat_ngram: 3,
+        et_hypotheses: parseInt($('n-et-hyp')?.value || 5),
+        et_passes: parseInt($('n-et-pass')?.value || 2),
       };
-      // Передаём путь к выбранной эпохе
       if (_selectedVersionId && _selectedEpoch) {
         const r = await apiGet(`/api/models/versions/${_selectedVersionId}/epochs/${_selectedEpoch}/ckpt_path`).catch(() => null);
         if (r?.path) params.checkpoint_path = r.path;
@@ -656,13 +711,22 @@
       if (seed) appendMessageEl('user', seed, 'u' + Date.now(), Math.floor(Date.now() / 1000));
       _generating = true; const btn = $('send-btn'); if (btn) btn.disabled = true;
       const typId = 'typ' + Date.now(); const box = $('chat-messages');
-      if (box) { const d = document.createElement('div'); d.id = typId; d.className = 'msg msg-bot'; d.innerHTML = '<div class="msg-bubble"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>'; const em = box.querySelector('.chat-empty'); if (em) em.remove(); box.appendChild(d); box.scrollTop = box.scrollHeight; }
+      if (box) {
+        const d = document.createElement('div'); d.id = typId; d.className = 'msg msg-bot';
+        const modeLabel = _currentMode === 'extra_thinking' ? '🧠 Extra Thinking' : _currentMode === 'dpa' ? '🔬 DPA' : '⚡ Агенты';
+        d.innerHTML = `<div class="msg-bubble"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><div style="font-size:11px;color:var(--fg-muted);margin-top:4px">${modeLabel}…</div></div>`;
+        const em = box.querySelector('.chat-empty'); if (em) em.remove(); box.appendChild(d); box.scrollTop = box.scrollHeight;
+      }
+      const t0 = Date.now();
       try {
         const r = await apiPost(`/api/chats/${_currentChatId}/generate`, params);
         document.getElementById(typId)?.remove();
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
         if (r.error) appendMessageEl('bot', '❌ ' + r.error, 'e' + Date.now(), Math.floor(Date.now() / 1000));
         else {
-          appendMessageEl('bot', r.text, r.msg_id, Math.floor(Date.now() / 1000));
+          const wc = r.word_count || 0; const tgt = r.target_words || numWords;
+          const winfo = `<span style="font-size:11px;color:var(--fg-muted);float:right">📝 ${wc}/${tgt} сл. · ${elapsed}с · ${_currentMode}</span>`;
+          appendMessageEl('bot', r.text, r.msg_id, Math.floor(Date.now() / 1000), winfo);
           const chat = _chats.find(c => c.id === _currentChatId);
           if (chat && chat.title === 'Новый чат' && seed) { const t = seed.slice(0, 30) + (seed.length > 30 ? '…' : ''); await apiPost(`/api/chats/${_currentChatId}/rename`, { title: t }); chat.title = t; tx('chat-title', t); renderChatList(); }
         }
