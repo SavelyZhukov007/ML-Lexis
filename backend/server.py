@@ -972,7 +972,7 @@ def main():
         webbrowser.open(f"http://localhost:{port}")
     except:
         pass
-    app.run(host="0.0.0.0", port=port, threaded=True, debug=False, use_reloader=False)
+    app.run(host="0.0.0.0", port=port, threaded=True, debug=True, use_reloader=False)
 
 
 if __name__ == "__main__":
