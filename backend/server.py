@@ -69,7 +69,14 @@ from core.tokenizer import (
     extend_vocab_with_words,
     VOCAB_FILE,
 )
-from core.postprocess import postprocess, deep_process
+from core.postprocess import (
+    postprocess,
+    postprocess_selective,
+    postprocess_with_diff,
+    deep_process,
+    consciousness_generate,
+    ConsciousnessConfig,
+)
 from core.state import (
     init as st_init,
     read as st_read,
@@ -377,7 +384,7 @@ def api_messages(cid):
 
 def _load_model(checkpoint_path: str = None):
     import torch
-    from core.model import build as build_model
+    from core.model import build_auto
 
     path = Path(checkpoint_path) if checkpoint_path else CKPT_DIR / "best_model.pt"
     if not path.exists():
@@ -385,9 +392,9 @@ def _load_model(checkpoint_path: str = None):
     ckpt = torch.load(str(path), map_location="cpu", weights_only=True)
     params = ckpt["params"]
     ckpt_vs = ckpt["vocab_size"]
-    model = build_model(ckpt_vs, params)
-    model.load_state_dict(ckpt["model"], strict=True)
-    model.eval()
+    # build_auto сам определяет legacy/новую архитектуру и загружает веса (strict=False)
+    model = build_auto(ckpt_vs, params, state_dict=ckpt["model"])
+    model.eval()  # build_auto уже вызывает eval, но оставим для надёжности
     vocab_dir = path.parent.parent if path.parent.name == "checkpoints" else None
     vocab = load_vocab(base_dir=vocab_dir)
     return model, vocab, ckpt_vs
@@ -397,16 +404,30 @@ def _load_model(checkpoint_path: str = None):
 @auth_required
 def api_generate(cid):
     d = request.json or {}
-    seed = d.get("seed", "").strip()
-    n_words = max(3, min(1000, int(d.get("num_words", 60))))
+    seed = d.get("seed", d.get("prompt", "")).strip()
+    n_words = max(
+        3,
+        min(
+            2000 if g.user.get("role") == "admin" else 200,
+            int(d.get("num_words", d.get("n_words", 60))),
+        ),
+    )
     temp = float(d.get("temperature", 1.0))
     top_k = int(d.get("top_k", 50))
     top_p = float(d.get("top_p", 0.92))
     use_dpa = bool(d.get("deep_process", False))
+    use_consciousness = bool(d.get("consciousness", False))
+    inspector_mode = bool(d.get("inspector_mode", False))
     rep_pen = float(d.get("repetition_penalty", 1.3))
     no_rep = int(d.get("no_repeat_ngram", 3))
+    active_agents = d.get("active_agents")  # list[str] or None
+    consciousness_cfg = d.get("consciousness_config", {})
     ckpt_path = d.get("checkpoint_path")
     version_id = d.get("version_id")
+
+    is_admin = g.user.get("role") == "admin"
+    if use_consciousness and not is_admin:
+        use_consciousness = False
 
     if version_id is not None and ckpt_path is None:
         version = get_model_version_by_id(int(version_id))
@@ -430,20 +451,10 @@ def api_generate(cid):
             i2w = vocab["i2w"]
         prompt = [w2i.get(t, bos) for t in seed_tokens] or [bos]
 
-        def make_text(raw_text: str) -> str:
-            corrections = get_all_corrections()
-            if use_dpa and len(raw_text.split()) >= 100:
-                return deep_process(
-                    raw_text,
-                    model,
-                    vocab,
-                    temperature=temp,
-                    top_k=top_k,
-                    top_p=top_p,
-                    ckpt_vs=ckpt_vs,
-                    corrections=corrections,
-                )
-            return postprocess(raw_text, corrections)
+        corrections = get_all_corrections()
+        extra_corrections = d.get("corrections")
+        if extra_corrections and isinstance(extra_corrections, dict):
+            corrections = {**corrections, **extra_corrections}
 
         def generate_ids(prompt_tokens, count):
             return model.generate(
@@ -459,40 +470,110 @@ def api_generate(cid):
                 min_new_tokens=min(10, count),
             )
 
-        gen_ids = generate_ids(prompt, n_words)
-        words = [i2w.get(i, "") for i in gen_ids if i2w.get(i, "")]
-        raw = ((" ".join(seed_tokens) + " ") if seed_tokens else "") + " ".join(words)
-        text = make_text(raw)
+        agent_diff = []
+        consciousness_data = {}
 
-        target_min = max(1, int(n_words * 0.99))
-        target_max = int(n_words * 1.01) + 1
-        attempt = 0
-        while attempt < 5:
-            count = len(text.split())
-            if target_min <= count <= target_max:
-                break
-            if count < target_min:
-                extra = max(1, min(n_words - count, 200))
-                prompt_tokens = [w2i.get(t, bos) for t in tokenize_text(text)] or [bos]
-                more_ids = generate_ids(prompt_tokens, extra)
-                extra_words = [i2w.get(i, "") for i in more_ids if i2w.get(i, "")]
-                raw = (text + " " + " ".join(extra_words)).strip()
-                text = make_text(raw)
-                attempt += 1
-            else:
-                break
+        # ── Consciousness mode ──
+        if use_consciousness:
+            cfg = ConsciousnessConfig(
+                n_hypotheses=int(consciousness_cfg.get("n_hypotheses", 5)),
+                refine_passes=int(consciousness_cfg.get("refine_passes", 2)),
+            )
+            result = consciousness_generate(
+                model,
+                vocab,
+                prompt,
+                max_new=n_words,
+                config=cfg,
+                ckpt_vs=ckpt_vs,
+                corrections=corrections,
+            )
+            text = result["text"]
+            raw = " ".join(
+                [
+                    i2w.get(i, "")
+                    for i in generate_ids(prompt, n_words)
+                    if i2w.get(i, "")
+                ]
+            )
+            consciousness_data = result
+
+        else:
+            # ── Normal / DPA mode ──
+            def make_text(raw_text: str) -> tuple:
+                if use_dpa and len(raw_text.split()) >= 30:
+                    processed = deep_process(
+                        raw_text,
+                        model,
+                        vocab,
+                        temperature=temp,
+                        top_k=top_k,
+                        top_p=top_p,
+                        ckpt_vs=ckpt_vs,
+                        corrections=corrections,
+                    )
+                    return processed, []
+                if inspector_mode:
+                    result = postprocess_with_diff(raw_text, active_agents, corrections)
+                    return result["text"], result.get("agent_diff", [])
+                if active_agents is not None:
+                    return (
+                        postprocess_selective(raw_text, active_agents, corrections),
+                        [],
+                    )
+                return postprocess(raw_text, corrections), []
+
+            gen_ids = generate_ids(prompt, n_words)
+            words = [i2w.get(i, "") for i in gen_ids if i2w.get(i, "")]
+            raw = ((" ".join(seed_tokens) + " ") if seed_tokens else "") + " ".join(
+                words
+            )
+            text, agent_diff = make_text(raw)
+
+            target_min = max(1, int(n_words * 0.99))
+            target_max = int(n_words * 1.01) + 1
+            attempt = 0
+            while attempt < 5:
+                count = len(text.split())
+                if target_min <= count <= target_max:
+                    break
+                if count < target_min:
+                    extra = max(1, min(n_words - count, 200))
+                    prompt_tokens = [w2i.get(t, bos) for t in tokenize_text(text)] or [
+                        bos
+                    ]
+                    more_ids = generate_ids(prompt_tokens, extra)
+                    extra_words = [i2w.get(i, "") for i in more_ids if i2w.get(i, "")]
+                    raw = (text + " " + " ".join(extra_words)).strip()
+                    text, agent_diff = make_text(raw)
+                    attempt += 1
+                else:
+                    break
 
         if seed:
             add_message(cid, "user", seed)
         bot_mid = add_message(cid, "bot", text)
-        return jsonify({
+
+        resp = {
             "ok": True,
             "text": text,
             "msg_id": bot_mid,
-            "raw": raw,
+            "raw": (
+                raw
+                if not use_consciousness
+                else consciousness_data.get("consensus", text)
+            ),
             "word_count": len(text.split()),
             "target_words": n_words,
-        })
+        }
+        if inspector_mode or use_consciousness:
+            resp["agent_diff"] = agent_diff
+        if use_consciousness:
+            resp["hypotheses"] = consciousness_data.get("hypotheses", [])
+            resp["scores"] = consciousness_data.get("scores", [])
+            resp["best"] = consciousness_data.get("best", text)
+            resp["stats"] = consciousness_data.get("stats", {})
+        return jsonify(resp)
     except Exception as e:
         log.error(f"Generate: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -983,9 +1064,14 @@ if __name__ == "__main__":
 #  Epoch management API
 # ═══════════════════════════════════════════════
 
-from core.db import (validate_epoch, delete_epoch_ckpt,
-                     get_epochs_for_chat, get_all_epochs_rich,
-                     get_epoch_ckpt_path, get_models_with_versions)
+from core.db import (
+    validate_epoch,
+    delete_epoch_ckpt,
+    get_epochs_for_chat,
+    get_all_epochs_rich,
+    get_epoch_ckpt_path,
+    get_models_with_versions,
+)
 
 
 @app.route("/api/models/versions/<int:vid>/epochs/rich")
@@ -994,10 +1080,12 @@ def api_epochs_rich(vid):
     return jsonify(get_all_epochs_rich(vid))
 
 
-@app.route("/api/models/versions/<int:vid>/epochs/<int:epoch>/validate", methods=["POST"])
+@app.route(
+    "/api/models/versions/<int:vid>/epochs/<int:epoch>/validate", methods=["POST"]
+)
 @admin_required
 def api_validate_epoch(vid, epoch):
-    d    = request.json or {}
+    d = request.json or {}
     name = d.get("name", "").strip()
     if not name:
         return jsonify({"error": "Укажи имя для валидированной эпохи"}), 400
@@ -1005,7 +1093,9 @@ def api_validate_epoch(vid, epoch):
     return jsonify({"ok": True, "epoch": result})
 
 
-@app.route("/api/models/versions/<int:vid>/epochs/<int:epoch>/delete_ckpt", methods=["POST"])
+@app.route(
+    "/api/models/versions/<int:vid>/epochs/<int:epoch>/delete_ckpt", methods=["POST"]
+)
 @admin_required
 def api_delete_epoch_ckpt(vid, epoch):
     result = delete_epoch_ckpt(vid, epoch)
@@ -1015,6 +1105,7 @@ def api_delete_epoch_ckpt(vid, epoch):
 @app.route("/api/models/versions/<int:vid>/epochs/<int:epoch>/samples")
 def api_epoch_samples(vid, epoch):
     from core.db import get_model_samples
+
     return jsonify(get_model_samples(vid, epoch=epoch))
 
 

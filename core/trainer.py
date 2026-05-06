@@ -1,10 +1,3 @@
-"""
-core/trainer.py — Lexis
-- Хранит последние 20 чекпоинтов, best_model.pt всегда
-- Правки пользователей в датасет
-- Windows-safe state
-"""
-
 import gc
 import math
 import time
@@ -25,10 +18,8 @@ from core.tokenizer import BOS, load_vocab, load_tokens, tokenize_text
 from core.db import add_model_sample, update_model_version, get_all_corrections
 
 log = logging.getLogger("trainer")
-
 os.environ["KMP_BLOCKTIME"] = "0"
 MAX_RAM_BYTES = 900 * 1024 * 1024
-
 _setup_done = False
 
 
@@ -47,14 +38,12 @@ def _setup():
 
 def _safe_batch_size(params: dict) -> int:
     bs = params["batch_size"]
-    d = params["d_model"]
-    sl = params["seq_len"]
-    nl = params["n_layers"]
+    d, sl, nl = params["d_model"], params["seq_len"], params["n_layers"]
     per = sl * d * nl * 4 * 8
     while bs > 1 and bs * per > MAX_RAM_BYTES // 2:
         bs //= 2
     if bs != params["batch_size"]:
-        log.warning(f"Batch size уменьшен до {bs} для экономии RAM")
+        log.warning(f"Batch size уменьшен до {bs}")
     return bs
 
 
@@ -75,10 +64,8 @@ class TokenDataset(Dataset):
 
 
 class CorrectionDataset(Dataset):
-    """Датасет из правок пользователей: wrong → correct."""
-
-    def __init__(self, pairs: list[tuple], w2i: dict, seq_len: int):
-        from core.tokenizer import tokenize_text, BOS, EOS
+    def __init__(self, pairs: list, w2i: dict, seq_len: int):
+        from core.tokenizer import BOS, EOS
 
         self.seq_len = seq_len
         self.samples = []
@@ -91,7 +78,7 @@ class CorrectionDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def _pad(self, seq: list) -> list:
+    def _pad(self, seq):
         seq = seq[: self.seq_len]
         return seq + [0] * (self.seq_len - len(seq))
 
@@ -121,32 +108,31 @@ def _latest_ckpt(ckpt_dir: Path):
 
 
 def _prune(ckpt_dir: Path, keep: int = 20):
-    """Держим последние `keep` чекпоинтов. best_model.pt не трогаем."""
-    ckpts = sorted(ckpt_dir.glob("epoch_*.pt"))
-    for old in ckpts[:-keep]:
+    for old in sorted(ckpt_dir.glob("epoch_*.pt"))[:-keep]:
         try:
             old.unlink()
         except Exception:
             pass
 
 
-def _save_ckpt(model, optimizer, epoch, vocab_size, params, ckpt_dir: Path, is_checkpoint=True):
+def _save_ckpt(
+    model, optimizer, epoch, vocab_size, params, ckpt_dir: Path, is_checkpoint=True
+):
     data = {
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "epoch": epoch,
         "vocab_size": vocab_size,
         "params": params,
+        "arch": "v5",
     }
     if is_checkpoint:
         torch.save(data, str(_ckpt_path(ckpt_dir, epoch)))
         _prune(ckpt_dir, keep=20)
-    # best_model не содержит optimizer (экономия места)
-    best_data = {k: v for k, v in data.items() if k != "optimizer"}
-    return best_data
+    return {k: v for k, v in data.items() if k != "optimizer"}
 
 
-def _save_sample_text(model, vocab, params, prompt_ids, sample_num, ckpt_vs):
+def _save_sample_text(model, vocab, params, prompt_ids, ckpt_vs):
     raw_ids = model.generate(
         prompt_ids,
         max_new=120,
@@ -166,7 +152,7 @@ def _save_sample_text(model, vocab, params, prompt_ids, sample_num, ckpt_vs):
     return text
 
 
-def _save_epoch_samples(model, vocab, params, version_id, epoch, model_root):
+def _save_epoch_samples(model, vocab, params, version_id, epoch):
     if version_id is None:
         return
     base_prompt = [vocab["w2i"].get("<BOS>", 1)]
@@ -178,20 +164,58 @@ def _save_epoch_samples(model, vocab, params, version_id, epoch, model_root):
         {"temperature": 1.1, "top_k": 20, "top_p": 0.99},
     ]
     ckpt_vs = vocab["vocab_size"]
-    for idx, variant in enumerate(variants, start=1):
-        sample_params = {
-            "temperature": variant["temperature"],
-            "top_k": variant["top_k"],
-            "top_p": variant["top_p"],
-            "repetition_penalty": 1.3,
-            "no_repeat_ngram": 3,
-        }
-        params_save = {**params, **sample_params}
-        text = _save_sample_text(model, vocab, params_save, base_prompt, idx, ckpt_vs)
-        add_model_sample(version_id, epoch, idx, params_save, text, saved_name=None)
+    for idx, variant in enumerate(variants, 1):
+        p = {**params, **variant, "repetition_penalty": 1.3, "no_repeat_ngram": 3}
+        text = _save_sample_text(model, vocab, p, base_prompt, ckpt_vs)
+        add_model_sample(version_id, epoch, idx, p, text, saved_name=None)
 
 
-def run(params: dict, version_id: int = None, model_slug: str | None = None):
+# ── Warmup + Cosine LR scheduler ─────────────────────────────────────────────
+
+
+class WarmupCosineScheduler(torch.optim.lr_scheduler._LRScheduler):
+    def __init__(
+        self,
+        optimizer,
+        warmup_steps: int,
+        total_steps: int,
+        min_lr_ratio: float = 0.05,
+        last_epoch=-1,
+    ):
+        self.warmup_steps = max(warmup_steps, 1)
+        self.total_steps = max(total_steps, warmup_steps + 1)
+        self.min_lr_ratio = min_lr_ratio
+        super().__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        step = self.last_epoch
+        lrs = []
+        for base_lr in self.base_lrs:
+            min_lr = base_lr * self.min_lr_ratio
+            if step < self.warmup_steps:
+                lr = base_lr * step / self.warmup_steps
+            else:
+                progress = (step - self.warmup_steps) / (
+                    self.total_steps - self.warmup_steps
+                )
+                lr = min_lr + 0.5 * (base_lr - min_lr) * (
+                    1 + math.cos(math.pi * progress)
+                )
+            lrs.append(max(lr, min_lr))
+        return lrs
+
+
+def _extend_model_vocab(state_dict, old_vs, new_vs, d_model):
+    for key in ["tok_emb.weight", "head.weight"]:
+        if key in state_dict:
+            old_w = state_dict[key]
+            if old_w.shape[0] == old_vs:
+                extra = torch.zeros(new_vs - old_vs, old_w.shape[1])
+                nn.init.normal_(extra, std=0.02)
+                state_dict[key] = torch.cat([old_w, extra], dim=0)
+
+
+def run(params: dict, version_id: int = None, model_slug: str = None):
     _setup()
 
     log.info("Загрузка данных...")
@@ -203,11 +227,13 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
     vocab_size = vocab["vocab_size"]
     seq_len = params["seq_len"]
     batch_size = _safe_batch_size(params)
+    grad_accum = params.get("grad_accum", 1)
+    use_amp = params.get("use_amp", False) and torch.cuda.is_available()
+    patience = params.get("early_stop_patience", 15)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     split = int(len(tokens) * 0.9)
-    train_tok = tokens[:split]
-    val_tok = tokens[split:]
-
+    train_tok, val_tok = tokens[:split], tokens[split:]
     main_train_ds = TokenDataset(train_tok, seq_len)
     val_ds = TokenDataset(val_tok, seq_len)
 
@@ -228,16 +254,14 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
     n_train = max(1, len(train_ds) // batch_size)
     n_val = max(1, len(val_ds) // batch_size)
     log.info(
-        f"  Токенов: {len(tokens):,} | vocab: {vocab_size:,} | "
-        f"batch: {batch_size} | train: {n_train:,}"
+        f"  Токенов: {len(tokens):,} | vocab: {vocab_size:,} | batch: {batch_size} | train: {n_train:,} | device: {device}"
     )
 
     resume_epoch, _ = ST.get_resume_point()
     ckpt_dir = model_ckpt_dir(model_slug)
     ckpt_path, ckpt_epoch = _latest_ckpt(ckpt_dir)
 
-    model = build(vocab_size, params)
-
+    model = build(vocab_size, params).to(device)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -246,9 +270,16 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
         eps=1e-8,
         weight_decay=0.1,
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(n_train * 10, 1000), eta_min=params["lr"] * 0.05
+
+    # Total steps for scheduler: estimated epochs * batches
+    estimated_epochs = max(params.get("max_epochs", 200), 50)
+    total_steps = n_train * estimated_epochs
+    warmup_steps = min(200, total_steps // 20)
+    scheduler = WarmupCosineScheduler(
+        optimizer, warmup_steps, total_steps, min_lr_ratio=0.05
     )
+
+    scaler = torch.cuda.amp.GradScaler() if use_amp else None
 
     start_epoch = 0
     if ckpt_path and resume_epoch > 0:
@@ -269,6 +300,7 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
     ST.set_total_params(count_params(model))
     ST.set_running()
     best_val = float("inf")
+    no_improve = 0
     epoch = start_epoch
     log.info("Обучение запущено.")
 
@@ -279,11 +311,17 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
         ep_start = time.time()
 
         train_loader = DataLoader(
-            train_ds, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=0
+            train_ds,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=True,
+            num_workers=0,
+            pin_memory=(device.type == "cuda"),
         )
 
         model.train()
         ep_loss, ep_acc, ep_steps = 0.0, 0.0, 0
+        optimizer.zero_grad(set_to_none=True)
 
         for step, (xb, yb) in enumerate(train_loader):
             if step % 10 == 0 and ST.is_stop_requested():
@@ -292,15 +330,33 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
                 _save_ckpt(model, optimizer, epoch, vocab_size, params, ckpt_dir)
                 return
 
-            optimizer.zero_grad(set_to_none=True)
-            logits = model(xb)
-            loss = criterion(logits.view(-1, vocab_size), yb.view(-1))
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
+            xb, yb = xb.to(device), yb.to(device)
 
-            bl = loss.item()
+            if use_amp:
+                with torch.cuda.amp.autocast():
+                    logits = model(xb)
+                    loss = (
+                        criterion(logits.view(-1, vocab_size), yb.view(-1)) / grad_accum
+                    )
+                scaler.scale(loss).backward()
+            else:
+                logits = model(xb)
+                loss = criterion(logits.view(-1, vocab_size), yb.view(-1)) / grad_accum
+                loss.backward()
+
+            if (step + 1) % grad_accum == 0:
+                if use_amp:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    optimizer.step()
+                scheduler.step()
+                optimizer.zero_grad(set_to_none=True)
+
+            bl = loss.item() * grad_accum
             with torch.no_grad():
                 preds = logits.argmax(-1)
                 mask = yb != 0
@@ -320,10 +376,10 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
             if step % 200 == 0:
                 cur_lr = scheduler.get_last_lr()[0]
                 log.info(
-                    f"  [{epoch}:{step:5d}/{n_train}] loss={bl:.4f} "
-                    f"PPL={math.exp(min(bl,30)):.1f} lr={cur_lr:.2e}"
+                    f"  [{epoch}:{step:5d}/{n_train}] loss={bl:.4f} PPL={math.exp(min(bl,30)):.1f} lr={cur_lr:.2e}"
                 )
 
+        # Validation
         model.eval()
         v_losses = []
         with torch.no_grad():
@@ -334,6 +390,7 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
                 drop_last=True,
                 num_workers=0,
             ):
+                xv, yv = xv.to(device), yv.to(device)
                 vl = criterion(model(xv).view(-1, vocab_size), yv.view(-1))
                 v_losses.append(vl.item())
 
@@ -349,37 +406,51 @@ def run(params: dict, version_id: int = None, model_slug: str | None = None):
         is_best = vl < best_val
         if is_best:
             best_val = vl
+            no_improve = 0
             best_data = _save_ckpt(
-                model, optimizer, epoch, vocab_size, params, ckpt_dir, is_checkpoint=False
+                model,
+                optimizer,
+                epoch,
+                vocab_size,
+                params,
+                ckpt_dir,
+                is_checkpoint=False,
             )
             best_path = _best_path(ckpt_dir)
             torch.save(best_data, str(best_path))
-            update_model_version(version_id, best_epoch=epoch, best_val_loss=vl, checkpoint_path=str(best_path))
+            update_model_version(
+                version_id,
+                best_epoch=epoch,
+                best_val_loss=vl,
+                checkpoint_path=str(best_path),
+            )
             log.info(f"  ★ Новый лучший val={vl:.4f}")
+        else:
+            no_improve += 1
+            # Reduce LR on plateau
+            if no_improve % 5 == 0:
+                for pg in optimizer.param_groups:
+                    pg["lr"] = max(pg["lr"] * 0.5, params["lr"] * 0.01)
+                log.info(f"  Plateau: lr уменьшен (no_improve={no_improve})")
 
         log.info(
-            f"  Epoch {epoch} | train={tl:.4f} PPL={tppl:.1f} | "
-            f"val={vl:.4f} PPL={vppl:.1f} | {dur:.0f}с"
+            f"  Epoch {epoch} | train={tl:.4f} PPL={tppl:.1f} | val={vl:.4f} PPL={vppl:.1f} | {dur:.0f}с | no_improve={no_improve}"
         )
 
-        # Сохраняем чекпоинт каждые 5 эпох и в конце
         if epoch % 5 == 0:
             _save_ckpt(model, optimizer, epoch, vocab_size, params, ckpt_dir)
 
-        # Генерируем пробные сэмплы для истории модели
         try:
-            _save_epoch_samples(model, vocab, params, version_id, epoch, model_root)
+            _save_epoch_samples(model, vocab, params, version_id, epoch)
         except Exception as e:
-            log.warning(f"Не удалось сохранить образцы после эпохи {epoch}: {e}")
+            log.warning(f"Образцы не сохранены: {e}")
+
+        # Early stopping
+        if no_improve >= patience:
+            log.info(f"  Early stopping: {patience} эпох без улучшения val_loss")
+            ST.set_stopped_early()
+            break
 
         gc.collect()
-
-
-def _extend_model_vocab(state_dict: dict, old_vs: int, new_vs: int, d_model: int):
-    for key in ["tok_emb.weight", "head.weight"]:
-        if key in state_dict:
-            old_w = state_dict[key]
-            if old_w.shape[0] == old_vs:
-                extra = torch.zeros(new_vs - old_vs, old_w.shape[1])
-                torch.nn.init.normal_(extra, std=0.02)
-                state_dict[key] = torch.cat([old_w, extra], dim=0)
+        if device.type == "cuda":
+            torch.cuda.empty_cache()

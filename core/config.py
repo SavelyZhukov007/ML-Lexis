@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from pathlib import Path
 
@@ -10,10 +11,51 @@ LOG_DIR = STORAGE_DIR / "logs"
 DB_FILE = STORAGE_DIR / "textreator.db"
 STATE_FILE = STORAGE_DIR / "train_state.json"
 CONFIG_FILE = STORAGE_DIR / "config.json"
-DATASETS_DIR = STORAGE_DIR / "datasets"  # пользовательские датасеты
+DATASETS_DIR = STORAGE_DIR / "datasets"
+ENV_FILE = ROOT_DIR / ".env"
 
 for _d in [STORAGE_DIR, MODELS_DIR, CKPT_DIR, LOG_DIR, DATASETS_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
+
+
+def _load_env():
+    env = {}
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text("utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    env.update(os.environ)
+    return env
+
+
+_ENV = _load_env()
+
+
+def _env(key: str, default: str = "") -> str:
+    return _ENV.get(key, default)
+
+
+ADMIN_USERNAME = _env("LEXIS_ADMIN_USER", "admin")
+ADMIN_PASSWORD = _env("LEXIS_ADMIN_PASS", "")
+
+# Если пароль не задан в .env — создаём дефолтный .env при первом запуске
+if not ADMIN_PASSWORD:
+    import secrets
+
+    ADMIN_PASSWORD = secrets.token_urlsafe(12)
+    if not ENV_FILE.exists():
+        ENV_FILE.write_text(
+            f"# Lexis Configuration\n"
+            f"LEXIS_ADMIN_USER={ADMIN_USERNAME}\n"
+            f"LEXIS_ADMIN_PASS={ADMIN_PASSWORD}\n",
+            "utf-8",
+        )
+        print(f"\n  [!] Создан файл .env с паролем администратора")
+        print(f"  [!] Логин: {ADMIN_USERNAME}")
+        print(f"  [!] Пароль: {ADMIN_PASSWORD}")
+        print(f"  [!] Файл: {ENV_FILE}\n")
 
 
 def slugify(name: str) -> str:
@@ -57,9 +99,6 @@ def model_state_file(slug: str) -> Path:
     return model_dir(slug) / "train_state.json"
 
 
-ADMIN_USERNAME = "savely"
-ADMIN_PASSWORD = "180386q1"
-
 PROFILES = {
     "nano": {
         "name": "Nano",
@@ -71,7 +110,10 @@ PROFILES = {
         "seq_len": 64,
         "batch_size": 64,
         "lr": 1e-3,
-        "desc": "~4M параметров. Быстро обучается, качество базовое. Рекомендуется для теста.",
+        "grad_accum": 1,
+        "use_amp": False,
+        "early_stop_patience": 15,
+        "desc": "~4M параметров. Быстро обучается, качество базовое.",
     },
     "small": {
         "name": "Small",
@@ -83,6 +125,9 @@ PROFILES = {
         "seq_len": 128,
         "batch_size": 32,
         "lr": 5e-4,
+        "grad_accum": 2,
+        "use_amp": False,
+        "early_stop_patience": 15,
         "desc": "~15M параметров. Хороший баланс скорости и качества.",
     },
     "medium": {
@@ -95,6 +140,9 @@ PROFILES = {
         "seq_len": 256,
         "batch_size": 16,
         "lr": 3e-4,
+        "grad_accum": 4,
+        "use_amp": True,
+        "early_stop_patience": 20,
         "desc": "~50M параметров. Высокое качество, медленно на CPU.",
     },
     "custom": {
@@ -107,6 +155,9 @@ PROFILES = {
         "seq_len": 128,
         "batch_size": 32,
         "lr": 5e-4,
+        "grad_accum": 1,
+        "use_amp": False,
+        "early_stop_patience": 15,
         "desc": "Ручная настройка всех параметров.",
     },
 }

@@ -1,588 +1,831 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lexis — Обучение</title>
-<link rel="stylesheet" href="/css/main.css">
-<style>
-.param-card{background:var(--bg3);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px}
-.param-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
-.param-formula{font-size:11px;color:var(--accent);font-family:monospace;margin-bottom:4px}
-.param-desc{font-size:12px;color:var(--muted2);line-height:1.55}
-.param-trends{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.trend-good{background:rgba(34,211,165,.12);color:var(--green);font-size:11px;padding:2px 8px;border-radius:4px}
-.trend-bad{background:rgba(247,85,85,.12);color:var(--red);font-size:11px;padding:2px 8px;border-radius:4px}
-.auto-badge{background:rgba(79,142,247,.15);color:var(--accent);font-size:11px;padding:3px 10px;border-radius:5px;font-weight:600}
-.upload-pt-area{border:2px dashed var(--border);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:border-color .15s;color:var(--muted2);font-size:13px}
-.upload-pt-area:hover{border-color:var(--accent);color:var(--accent)}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexis — Обучение</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .param-card {
+      background: var(--bg3);
+      border-radius: var(--rs);
+      padding: 12px 14px;
+      margin-bottom: 10px
+    }
 
-/* Epoch table */
-.epoch-row{display:grid;grid-template-columns:50px 70px 80px 80px 80px 1fr auto;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--rs);margin-bottom:4px;font-size:13px;border:1px solid transparent;transition:border-color .15s}
-.epoch-row:hover{background:var(--bg3)}
-.epoch-row.best{border-color:rgba(34,211,165,.3);background:rgba(34,211,165,.04)}
-.epoch-row.validated{border-color:rgba(79,142,247,.3);background:rgba(79,142,247,.04)}
-.epoch-row.unvalidated{border-color:rgba(247,85,85,.2);opacity:.8}
-.epoch-row.ckpt-deleted{opacity:.45}
-.epoch-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600}
-.tag-best{background:rgba(34,211,165,.18);color:var(--green)}
-.tag-validated{background:rgba(79,142,247,.18);color:var(--accent)}
-.tag-unval{background:rgba(247,85,85,.18);color:var(--red)}
-.tag-deleted{background:var(--bg3);color:var(--muted)}
-.epoch-actions{display:flex;gap:4px}
-.ep-btn{border:none;border-radius:5px;cursor:pointer;padding:3px 10px;font-size:12px;font-weight:600;transition:opacity .12s}
-.ep-btn:hover{opacity:.8}
-.ep-btn-check{background:rgba(79,142,247,.18);color:var(--accent)}
-.ep-btn-save{background:rgba(34,211,165,.18);color:var(--green)}
-.ep-btn-del{background:rgba(247,85,85,.18);color:var(--red)}
+    .param-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px
+    }
 
-/* Samples panel */
-.samples-panel{background:var(--bg3);border-radius:var(--rs);padding:14px;margin-top:8px;display:none}
-.sample-card{background:var(--bg2);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px;font-size:13px;border-left:3px solid var(--border)}
-.sample-params{font-size:10px;color:var(--muted2);margin-bottom:6px;font-family:monospace}
-.sample-text{color:var(--text);line-height:1.6;white-space:pre-wrap}
+    .param-formula {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: monospace;
+      margin-bottom: 4px
+    }
 
-/* Family selector */
-.family-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;cursor:pointer;transition:all .15s;margin-bottom:6px}
-.family-card:hover{border-color:var(--accent)}
-.family-card.active{border-color:var(--accent);background:rgba(79,142,247,.07)}
-.family-meta{font-size:11px;color:var(--muted2);margin-top:4px}
-</style>
+    .param-desc {
+      font-size: 12px;
+      color: var(--muted2);
+      line-height: 1.55
+    }
+
+    .param-trends {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px
+    }
+
+    .trend-good {
+      background: rgba(34, 211, 165, .12);
+      color: var(--green);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px
+    }
+
+    .trend-bad {
+      background: rgba(247, 85, 85, .12);
+      color: var(--red);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px
+    }
+
+    .auto-badge {
+      background: rgba(79, 142, 247, .15);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 5px;
+      font-weight: 600
+    }
+
+    .upload-pt-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s;
+      color: var(--muted2);
+      font-size: 13px
+    }
+
+    .upload-pt-area:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    /* Epoch table */
+    .epoch-row {
+      display: grid;
+      grid-template-columns: 50px 70px 80px 80px 80px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: var(--rs);
+      margin-bottom: 4px;
+      font-size: 13px;
+      border: 1px solid transparent;
+      transition: border-color .15s
+    }
+
+    .epoch-row:hover {
+      background: var(--bg3)
+    }
+
+    .epoch-row.best {
+      border-color: rgba(34, 211, 165, .3);
+      background: rgba(34, 211, 165, .04)
+    }
+
+    .epoch-row.validated {
+      border-color: rgba(79, 142, 247, .3);
+      background: rgba(79, 142, 247, .04)
+    }
+
+    .epoch-row.unvalidated {
+      border-color: rgba(247, 85, 85, .2);
+      opacity: .8
+    }
+
+    .epoch-row.ckpt-deleted {
+      opacity: .45
+    }
+
+    .epoch-tag {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-weight: 600
+    }
+
+    .tag-best {
+      background: rgba(34, 211, 165, .18);
+      color: var(--green)
+    }
+
+    .tag-validated {
+      background: rgba(79, 142, 247, .18);
+      color: var(--accent)
+    }
+
+    .tag-unval {
+      background: rgba(247, 85, 85, .18);
+      color: var(--red)
+    }
+
+    .tag-deleted {
+      background: var(--bg3);
+      color: var(--muted)
+    }
+
+    .epoch-actions {
+      display: flex;
+      gap: 4px
+    }
+
+    .ep-btn {
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: opacity .12s
+    }
+
+    .ep-btn:hover {
+      opacity: .8
+    }
+
+    .ep-btn-check {
+      background: rgba(79, 142, 247, .18);
+      color: var(--accent)
+    }
+
+    .ep-btn-save {
+      background: rgba(34, 211, 165, .18);
+      color: var(--green)
+    }
+
+    .ep-btn-del {
+      background: rgba(247, 85, 85, .18);
+      color: var(--red)
+    }
+
+    /* Samples panel */
+    .samples-panel {
+      background: var(--bg3);
+      border-radius: var(--rs);
+      padding: 14px;
+      margin-top: 8px;
+      display: none
+    }
+
+    .sample-card {
+      background: var(--bg2);
+      border-radius: var(--rs);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      border-left: 3px solid var(--border)
+    }
+
+    .sample-params {
+      font-size: 10px;
+      color: var(--muted2);
+      margin-bottom: 6px;
+      font-family: monospace
+    }
+
+    .sample-text {
+      color: var(--text);
+      line-height: 1.6;
+      white-space: pre-wrap
+    }
+
+    /* Family selector */
+    .family-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--rs);
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all .15s;
+      margin-bottom: 6px
+    }
+
+    .family-card:hover {
+      border-color: var(--accent)
+    }
+
+    .family-card.active {
+      border-color: var(--accent);
+      background: rgba(79, 142, 247, .07)
+    }
+
+    .family-meta {
+      font-size: 11px;
+      color: var(--muted2);
+      margin-top: 4px
+    }
+  </style>
 </head>
+
 <body>
-<nav class="nav">
-  <a class="nav-logo" href="/"><div class="nav-logo-icon">L</div><span class="nav-logo-text">Lexis</span></a>
-  <div style="display:flex;gap:2px">
-    <a class="nav-link" href="/">📊 Дашборд</a>
-    <a class="nav-link active" href="/train.html">🧠 Обучение</a>
-    <a class="nav-link" href="/chat.html">💬 Чат</a>
-    <a class="nav-link" href="/settings.html">⚙️ Настройки</a>
-  </div>
-  <div class="nav-right">
-    <div id="nav-status" class="status-pill sp-idle"><span class="pulse-dot"></span><span id="nav-status-txt">Ожидание</span></div>
-  </div>
-</nav>
+  <nav class="nav">
+    <a class="nav-logo" href="/">
+      <div class="nav-logo-icon">L</div><span class="nav-logo-text">Lexis</span>
+    </a>
+    <div style="display:flex;gap:2px">
+      <a class="nav-link" href="/">📊 Дашборд</a>
+      <a class="nav-link active" href="/train.html">🧠 Обучение</a>
+      <a class="nav-link" href="/chat.html">💬 Чат</a>
+      <a class="nav-link" href="/settings.html">⚙️ Настройки</a>
+    </div>
+    <div class="nav-right">
+      <div id="nav-status" class="status-pill sp-idle"><span class="pulse-dot"></span><span
+          id="nav-status-txt">Ожидание</span></div>
+    </div>
+  </nav>
 
-<div class="page-wrap">
+  <div class="page-wrap">
 
-  <!-- Шаг 1: данные -->
-  <div class="card">
-    <div class="card-title">📄 Шаг 1 — Подготовка данных</div>
-    <div class="grid-2" style="gap:16px;align-items:start">
-      <div>
-        <div class="input-group">
-          <label class="input-label">Путь к text.txt</label>
-          <input class="inp" id="text-file" type="text" placeholder="C:\lexis\text.txt">
-          <div class="input-hint">Дополнительные файлы — в Чате → Датасеты</div>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="startTokenize()">⟳ Токенизировать</button>
-          <button class="btn btn-ghost" onclick="savePath()">💾 Сохранить путь</button>
-        </div>
-        <div id="tok-prog-wrap" style="display:none;margin-top:12px">
-          <div class="prog-wrap">
-            <div class="prog-label"><span id="tok-step">...</span><b id="tok-pct">0%</b></div>
-            <div class="prog-bg"><div class="prog-bar" id="tok-pb" style="width:0%"></div></div>
+    <!-- Шаг 1: данные -->
+    <div class="card">
+      <div class="card-title">📄 Шаг 1 — Подготовка данных</div>
+      <div class="grid-2" style="gap:16px;align-items:start">
+        <div>
+          <div class="input-group">
+            <label class="input-label">Путь к text.txt</label>
+            <input class="inp" id="text-file" type="text" placeholder="C:\lexis\text.txt">
+            <div class="input-hint">Дополнительные файлы — в Чате → Датасеты</div>
           </div>
-        </div>
-        <div id="auto-params-banner" class="hidden" style="margin-top:12px">
-          <div class="banner banner-success" style="align-items:flex-start;gap:8px">
-            <span style="font-size:16px;flex-shrink:0">✨</span>
-            <div>
-              <b>Авто-настройка применена</b>
-              <div id="auto-reasons" style="font-size:12px;margin-top:4px;color:var(--muted2)"></div>
-              <div style="margin-top:6px;font-size:12px">RAM: <b style="color:var(--accent)" id="auto-ram">—</b> МБ &nbsp;|&nbsp; tokens/vocab: <b style="color:var(--yellow)" id="auto-tpv">—</b></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="startTokenize()">⟳ Токенизировать</button>
+            <button class="btn btn-ghost" onclick="savePath()">💾 Сохранить путь</button>
+          </div>
+          <div id="tok-prog-wrap" style="display:none;margin-top:12px">
+            <div class="prog-wrap">
+              <div class="prog-label"><span id="tok-step">...</span><b id="tok-pct">0%</b></div>
+              <div class="prog-bg">
+                <div class="prog-bar" id="tok-pb" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+          <div id="auto-params-banner" class="hidden" style="margin-top:12px">
+            <div class="banner banner-success" style="align-items:flex-start;gap:8px">
+              <span style="font-size:16px;flex-shrink:0">✨</span>
+              <div>
+                <b>Авто-настройка применена</b>
+                <div id="auto-reasons" style="font-size:12px;margin-top:4px;color:var(--muted2)"></div>
+                <div style="margin-top:6px;font-size:12px">RAM: <b style="color:var(--accent)" id="auto-ram">—</b> МБ
+                  &nbsp;|&nbsp; tokens/vocab: <b style="color:var(--yellow)" id="auto-tpv">—</b></div>
+              </div>
+            </div>
+          </div>
+          <div id="auto-warnings-banner" class="hidden" style="margin-top:8px">
+            <div class="banner banner-warn" style="align-items:flex-start;gap:8px">
+              <span style="font-size:16px;flex-shrink:0">⚠️</span>
+              <div id="auto-warnings-text" style="font-size:12px;line-height:1.6"></div>
             </div>
           </div>
         </div>
-        <div id="auto-warnings-banner" class="hidden" style="margin-top:8px">
-          <div class="banner banner-warn" style="align-items:flex-start;gap:8px">
-            <span style="font-size:16px;flex-shrink:0">⚠️</span>
-            <div id="auto-warnings-text" style="font-size:12px;line-height:1.6"></div>
+        <div class="grid-2" style="gap:10px">
+          <div class="stat-card">
+            <div class="stat-num" id="tok-vocab">—</div>
+            <div class="stat-lbl">Словарь</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="tok-tokens">—</div>
+            <div class="stat-lbl">Токенов</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="tok-words">—</div>
+            <div class="stat-lbl">Слов</div>
+          </div>
+          <div class="stat-card" style="background:rgba(34,211,165,.08);border:1px solid rgba(34,211,165,.2)">
+            <div class="stat-num" id="tok-ok" style="color:var(--muted)">○</div>
+            <div class="stat-lbl">Статус</div>
           </div>
         </div>
       </div>
-      <div class="grid-2" style="gap:10px">
-        <div class="stat-card"><div class="stat-num" id="tok-vocab">—</div><div class="stat-lbl">Словарь</div></div>
-        <div class="stat-card"><div class="stat-num" id="tok-tokens">—</div><div class="stat-lbl">Токенов</div></div>
-        <div class="stat-card"><div class="stat-num" id="tok-words">—</div><div class="stat-lbl">Слов</div></div>
-        <div class="stat-card" style="background:rgba(34,211,165,.08);border:1px solid rgba(34,211,165,.2)">
-          <div class="stat-num" id="tok-ok" style="color:var(--muted)">○</div>
-          <div class="stat-lbl">Статус</div>
+    </div>
+
+    <!-- Шаг 2: параметры -->
+    <div class="card">
+      <div class="card-title">🚀 Шаг 2 — Параметры <span id="auto-badge" class="auto-badge hidden">✨ Авто</span></div>
+      <div class="profile-cards" id="profile-cards"></div>
+      <div id="custom-block" class="hidden">
+        <div class="separator"></div>
+        <div class="settings-grid">
+          <div>
+            <div class="param-card">
+              <div class="param-name">d_model — размерность</div>
+              <div class="param-formula">Параметры ≈ vocab × d_model × 2 + n_layers × (4 × d_model²)</div>
+              <div class="param-desc">Ширина вектора токена. 128–256 в 1 ГБ RAM. ×2 увеличение = ×4 параметров.</div>
+              <div class="param-trends"><span class="trend-good">128–256 → 1 ГБ</span><span class="trend-bad">>512 →
+                  переполнение</span></div>
+              <div class="slider-row" style="margin-top:8px"><input type="range" id="s-dm" min="64" max="512"
+                  step="64"><input type="number" id="n-dm" class="inp" style="width:70px"><span class="slider-val"
+                  id="v-dm">256</span></div>
+            </div>
+            <div class="param-card">
+              <div class="param-name">n_heads — голов внимания</div>
+              <div class="param-formula">d_head = d_model / n_heads (делит нацело)</div>
+              <div class="param-desc">Разные аспекты контекста. d_head < 16 снижает эффект.</div>
+                  <div class="param-trends"><span class="trend-good">d_model / n_heads ≥ 32</span><span
+                      class="trend-bad">d_head < 16 → хуже</span>
+                  </div>
+                  <div class="slider-row" style="margin-top:8px"><input type="range" id="s-nh" min="2" max="16"
+                      step="2"><input type="number" id="n-nh" class="inp" style="width:70px"><span class="slider-val"
+                      id="v-nh">8</span></div>
+              </div>
+              <div class="param-card">
+                <div class="param-name">n_layers — глубина</div>
+                <div class="param-formula">RAM ∝ n_layers × (d_model² × 4 + d_ff × d_model × 2)</div>
+                <div class="param-desc">На малых датасетах >3 слоёв = переобучение.</div>
+                <div class="param-trends"><span class="trend-good">2–4 для малых датасетов</span><span
+                    class="trend-bad">>6 без GPU — медленно</span></div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-nl" min="1" max="8"
+                    step="1"><input type="number" id="n-nl" class="inp" style="width:70px"><span class="slider-val"
+                    id="v-nl">4</span></div>
+              </div>
+              <div class="param-card">
+                <div class="param-name">d_ff — feed-forward</div>
+                <div class="param-formula">Обычно 4 × d_model. FFN = 2 × d_model × d_ff × n_layers</div>
+                <div class="param-desc">Мощность нелинейного преобразования.</div>
+                <div class="param-trends"><span class="trend-good">4 × d_model</span><span class="trend-bad">
+                    < 2 × d_model — хуже</span>
+                </div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-df" min="128" max="4096"
+                    step="128"><input type="number" id="n-df" class="inp" style="width:70px"><span class="slider-val"
+                    id="v-df">1024</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="param-card">
+                <div class="param-name">seq_len — контекст</div>
+                <div class="param-formula">RAM attention ∝ seq_len² × n_heads (квадрат!)</div>
+                <div class="param-desc">«Память» модели. Оптимум: 3× средняя длина предложения.</div>
+                <div class="param-trends"><span class="trend-good">3× средняя длина предложения</span><span
+                    class="trend-bad">>256 на CPU — медленно</span></div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-sl" min="16" max="512"
+                    step="16"><input type="number" id="n-sl" class="inp" style="width:70px"><span class="slider-val"
+                    id="v-sl">128</span></div>
+              </div>
+              <div class="param-card">
+                <div class="param-name">batch_size — батч</div>
+                <div class="param-formula">RAM_batch ≈ batch × seq_len × d_model × n_layers × 32 байт</div>
+                <div class="param-desc">Авто-уменьшается при нехватке RAM.</div>
+                <div class="param-trends"><span class="trend-good">16–64</span><span class="trend-bad">>128 — риск
+                    OOM</span></div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-bs" min="4" max="128"
+                    step="4"><input type="number" id="n-bs" class="inp" style="width:70px"><span class="slider-val"
+                    id="v-bs">32</span></div>
+              </div>
+              <div class="param-card">
+                <div class="param-name">dropout — регуляризация</div>
+                <div class="param-formula">Вероятность обнуления нейрона при обучении.</div>
+                <div class="param-desc">Чем меньше данных — тем выше нужен dropout.</div>
+                <div class="param-trends"><span class="trend-good">0.2–0.35 для малых датасетов</span><span
+                    class="trend-bad">0 → переобучение</span></div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-do" min="0" max="0.5"
+                    step="0.05"><input type="number" id="n-do" class="inp" style="width:70px" step="0.05"><span
+                    class="slider-val" id="v-do">0.15</span></div>
+              </div>
+              <div class="param-card">
+                <div class="param-name">learning rate (×10⁻⁴)</div>
+                <div class="param-formula">CosineAnnealingLR: min_lr = lr × 0.05</div>
+                <div class="param-desc">Скорость изменения весов. Косинусный decay снижает к концу.</div>
+                <div class="param-trends"><span class="trend-good">3–7 (×10⁻⁴)</span><span class="trend-bad">>20 →
+                    нестабильность</span></div>
+                <div class="slider-row" style="margin-top:8px"><input type="range" id="s-lr" min="1" max="30"
+                    step="1"><input type="number" id="n-lr" class="inp" style="width:70px"><span class="slider-val"
+                    id="v-lr">5</span></div>
+              </div>
+            </div>
+          </div>
+          <div id="ram-est" class="param-explain hidden" style="margin-top:10px">
+            <b>Оценка RAM:</b> ~<span id="ram-est-val">?</span> МБ
+            <span id="ram-warn" class="hidden" style="color:var(--red);margin-left:8px">⚠️ > 900 МБ!</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Шаг 3: управление семейством -->
+      <div class="card">
+        <div class="card-title">🧠 Шаг 3 — Семейство моделей</div>
+        <div class="grid-2" style="gap:16px;align-items:start">
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted2)">Выбрать существующее
+              семейство</div>
+            <div id="family-list" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
+            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-new-family')">＋ Новое семейство</button>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted2)">Управление обучением</div>
+            <div id="family-info" style="font-size:13px;color:var(--muted2);margin-bottom:12px">Выбери семейство слева →
+            </div>
+            <div class="btn-row">
+              <button id="btn-start" class="btn btn-success btn-lg" onclick="trainStart()" disabled>▶ Обучить</button>
+              <button id="btn-stop" class="btn btn-danger btn-lg hidden" onclick="trainStop()">⏹ Стоп</button>
+            </div>
+            <div class="prog-wrap" style="margin-top:12px">
+              <div class="prog-label"><span>Эп. <b id="t-ep">?</b> — батч <b id="t-bt">?</b>/<b
+                    id="t-tot">?</b></span><b id="t-pct">0%</b></div>
+              <div class="prog-bg">
+                <div class="prog-bar" id="t-pb" style="width:0%"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted2)">
+              <span>ETA: <b style="color:var(--yellow)" id="t-eta">—</b></span>
+              <span>Loss: <b style="color:var(--red)" id="t-loss">—</b></span>
+              <span>Val: <b style="color:var(--green)" id="t-vl">—</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Шаг 4: история эпох выбранного семейства -->
+      <div class="card" id="epoch-panel" style="display:none">
+        <div class="card-title">📋 Эпохи семейства: <b id="epoch-family-name">—</b></div>
+        <div style="font-size:12px;color:var(--muted2);margin-bottom:12px">
+          <span class="epoch-tag tag-best">★ Лучшая</span> — автосохранена &nbsp;
+          <span class="epoch-tag tag-validated">✓ Валидирована</span> — ручное сохранение &nbsp;
+          <span class="epoch-tag tag-unval">● Не валидирована</span> — красным, доступно 3 лучших &nbsp;
+          <span class="epoch-tag tag-deleted">✕ Удалена</span> — файл удалён, история остаётся
+        </div>
+        <div
+          style="display:grid;grid-template-columns:50px 70px 80px 80px 80px 1fr auto;gap:8px;padding:4px 12px;font-size:11px;color:var(--muted2);font-weight:600;margin-bottom:2px">
+          <span>#</span><span>Имя</span><span>Train</span><span>Val</span><span>PPL</span><span></span><span>Действия</span>
+        </div>
+        <div id="epoch-list"></div>
+
+        <!-- Samples panel (инлайн) -->
+        <div class="samples-panel" id="samples-panel">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">📝 Генерации эпохи <b
+              id="samples-epoch-num">—</b></div>
+          <div id="samples-list"></div>
+        </div>
+      </div>
+
+      <!-- Загрузка .pt -->
+      <div class="card">
+        <div class="card-title">📦 Загрузить .pt</div>
+        <div class="upload-pt-area" onclick="$('pt-input').click()">
+          📦 Перетащи .pt или нажми
+          <input type="file" id="pt-input" accept=".pt" style="display:none" onchange="handlePtSelect(event)">
+        </div>
+        <div id="pt-status" style="font-size:12px;min-height:18px;margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📟 Лог <button class="btn btn-ghost btn-sm ml-auto"
+            onclick="$('tlog').innerHTML=''">Очистить</button></div>
+        <div class="log-box scroll-y" id="tlog" style="height:200px"></div>
+      </div>
+    </div>
+
+    <!-- Modal: новое семейство -->
+    <div class="overlay hidden" id="modal-new-family" onclick="closeOverlay(event,'modal-new-family')">
+      <div class="modal modal-sm">
+        <div class="modal-header"><span class="modal-title">🆕 Новое семейство моделей</span><button class="modal-close"
+            onclick="closeModal('modal-new-family')">×</button></div>
+        <div class="modal-body">
+          <div class="form-group">
+            <div class="form-label">Название семейства</div>
+            <input class="inp" id="new-family-name" type="text" placeholder="LexiPem, Роман, Поэзия…">
+            <div class="input-hint">Папка storage/models/<i>название</i> будет создана автоматически</div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <div class="form-label">Заметка (опционально)</div>
+            <input class="inp" id="new-family-notes" type="text" placeholder="датасет, цель…">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-new-family')">Отмена</button>
+          <button class="btn btn-success btn-lg" onclick="createAndTrain()">▶ Создать и обучить</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Шаг 2: параметры -->
-  <div class="card">
-    <div class="card-title">🚀 Шаг 2 — Параметры <span id="auto-badge" class="auto-badge hidden">✨ Авто</span></div>
-    <div class="profile-cards" id="profile-cards"></div>
-    <div id="custom-block" class="hidden">
-      <div class="separator"></div>
-      <div class="settings-grid">
-        <div>
-          <div class="param-card">
-            <div class="param-name">d_model — размерность</div>
-            <div class="param-formula">Параметры ≈ vocab × d_model × 2 + n_layers × (4 × d_model²)</div>
-            <div class="param-desc">Ширина вектора токена. 128–256 в 1 ГБ RAM. ×2 увеличение = ×4 параметров.</div>
-            <div class="param-trends"><span class="trend-good">128–256 → 1 ГБ</span><span class="trend-bad">>512 → переполнение</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-dm" min="64" max="512" step="64"><input type="number" id="n-dm" class="inp" style="width:70px"><span class="slider-val" id="v-dm">256</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">n_heads — голов внимания</div>
-            <div class="param-formula">d_head = d_model / n_heads (делит нацело)</div>
-            <div class="param-desc">Разные аспекты контекста. d_head < 16 снижает эффект.</div>
-            <div class="param-trends"><span class="trend-good">d_model / n_heads ≥ 32</span><span class="trend-bad">d_head < 16 → хуже</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-nh" min="2" max="16" step="2"><input type="number" id="n-nh" class="inp" style="width:70px"><span class="slider-val" id="v-nh">8</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">n_layers — глубина</div>
-            <div class="param-formula">RAM ∝ n_layers × (d_model² × 4 + d_ff × d_model × 2)</div>
-            <div class="param-desc">На малых датасетах >3 слоёв = переобучение.</div>
-            <div class="param-trends"><span class="trend-good">2–4 для малых датасетов</span><span class="trend-bad">>6 без GPU — медленно</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-nl" min="1" max="8" step="1"><input type="number" id="n-nl" class="inp" style="width:70px"><span class="slider-val" id="v-nl">4</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">d_ff — feed-forward</div>
-            <div class="param-formula">Обычно 4 × d_model. FFN = 2 × d_model × d_ff × n_layers</div>
-            <div class="param-desc">Мощность нелинейного преобразования.</div>
-            <div class="param-trends"><span class="trend-good">4 × d_model</span><span class="trend-bad">< 2 × d_model — хуже</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-df" min="128" max="4096" step="128"><input type="number" id="n-df" class="inp" style="width:70px"><span class="slider-val" id="v-df">1024</span></div>
+    <!-- Modal: валидация эпохи -->
+    <div class="overlay hidden" id="modal-validate" onclick="closeOverlay(event,'modal-validate')">
+      <div class="modal modal-sm">
+        <div class="modal-header"><span class="modal-title">✓ Сохранить эпоху</span><button class="modal-close"
+            onclick="closeModal('modal-validate')">×</button></div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted2);margin-bottom:12px">Введи уникальное имя для этой эпохи. Файл
+            останется навсегда.</p>
+          <div class="form-group">
+            <div class="form-label">Имя модели этой эпохи</div>
+            <input class="inp" id="validate-name" type="text" placeholder="FJI-mini, GP-best, stable-v1…"
+              onkeydown="if(event.key==='Enter')submitValidate()">
+            <div class="input-hint" id="validate-hint">Будет назван: <b id="validate-preview">—</b></div>
           </div>
         </div>
-        <div>
-          <div class="param-card">
-            <div class="param-name">seq_len — контекст</div>
-            <div class="param-formula">RAM attention ∝ seq_len² × n_heads (квадрат!)</div>
-            <div class="param-desc">«Память» модели. Оптимум: 3× средняя длина предложения.</div>
-            <div class="param-trends"><span class="trend-good">3× средняя длина предложения</span><span class="trend-bad">>256 на CPU — медленно</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-sl" min="16" max="512" step="16"><input type="number" id="n-sl" class="inp" style="width:70px"><span class="slider-val" id="v-sl">128</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">batch_size — батч</div>
-            <div class="param-formula">RAM_batch ≈ batch × seq_len × d_model × n_layers × 32 байт</div>
-            <div class="param-desc">Авто-уменьшается при нехватке RAM.</div>
-            <div class="param-trends"><span class="trend-good">16–64</span><span class="trend-bad">>128 — риск OOM</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-bs" min="4" max="128" step="4"><input type="number" id="n-bs" class="inp" style="width:70px"><span class="slider-val" id="v-bs">32</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">dropout — регуляризация</div>
-            <div class="param-formula">Вероятность обнуления нейрона при обучении.</div>
-            <div class="param-desc">Чем меньше данных — тем выше нужен dropout.</div>
-            <div class="param-trends"><span class="trend-good">0.2–0.35 для малых датасетов</span><span class="trend-bad">0 → переобучение</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-do" min="0" max="0.5" step="0.05"><input type="number" id="n-do" class="inp" style="width:70px" step="0.05"><span class="slider-val" id="v-do">0.15</span></div>
-          </div>
-          <div class="param-card">
-            <div class="param-name">learning rate (×10⁻⁴)</div>
-            <div class="param-formula">CosineAnnealingLR: min_lr = lr × 0.05</div>
-            <div class="param-desc">Скорость изменения весов. Косинусный decay снижает к концу.</div>
-            <div class="param-trends"><span class="trend-good">3–7 (×10⁻⁴)</span><span class="trend-bad">>20 → нестабильность</span></div>
-            <div class="slider-row" style="margin-top:8px"><input type="range" id="s-lr" min="1" max="30" step="1"><input type="number" id="n-lr" class="inp" style="width:70px"><span class="slider-val" id="v-lr">5</span></div>
-          </div>
-        </div>
-      </div>
-      <div id="ram-est" class="param-explain hidden" style="margin-top:10px">
-        <b>Оценка RAM:</b> ~<span id="ram-est-val">?</span> МБ
-        <span id="ram-warn" class="hidden" style="color:var(--red);margin-left:8px">⚠️ > 900 МБ!</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Шаг 3: управление семейством -->
-  <div class="card">
-    <div class="card-title">🧠 Шаг 3 — Семейство моделей</div>
-    <div class="grid-2" style="gap:16px;align-items:start">
-      <div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted2)">Выбрать существующее семейство</div>
-        <div id="family-list" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
-        <button class="btn btn-ghost btn-sm" onclick="openModal('modal-new-family')">＋ Новое семейство</button>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--muted2)">Управление обучением</div>
-        <div id="family-info" style="font-size:13px;color:var(--muted2);margin-bottom:12px">Выбери семейство слева →</div>
-        <div class="btn-row">
-          <button id="btn-start" class="btn btn-success btn-lg" onclick="trainStart()" disabled>▶ Обучить</button>
-          <button id="btn-stop" class="btn btn-danger btn-lg hidden" onclick="trainStop()">⏹ Стоп</button>
-        </div>
-        <div class="prog-wrap" style="margin-top:12px">
-          <div class="prog-label"><span>Эп. <b id="t-ep">?</b> — батч <b id="t-bt">?</b>/<b id="t-tot">?</b></span><b id="t-pct">0%</b></div>
-          <div class="prog-bg"><div class="prog-bar" id="t-pb" style="width:0%"></div></div>
-        </div>
-        <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted2)">
-          <span>ETA: <b style="color:var(--yellow)" id="t-eta">—</b></span>
-          <span>Loss: <b style="color:var(--red)" id="t-loss">—</b></span>
-          <span>Val: <b style="color:var(--green)" id="t-vl">—</b></span>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-validate')">Отмена</button>
+          <button class="btn btn-primary btn-lg" onclick="submitValidate()">Сохранить</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Шаг 4: история эпох выбранного семейства -->
-  <div class="card" id="epoch-panel" style="display:none">
-    <div class="card-title">📋 Эпохи семейства: <b id="epoch-family-name">—</b></div>
-    <div style="font-size:12px;color:var(--muted2);margin-bottom:12px">
-      <span class="epoch-tag tag-best">★ Лучшая</span> — автосохранена &nbsp;
-      <span class="epoch-tag tag-validated">✓ Валидирована</span> — ручное сохранение &nbsp;
-      <span class="epoch-tag tag-unval">● Не валидирована</span> — красным, доступно 3 лучших &nbsp;
-      <span class="epoch-tag tag-deleted">✕ Удалена</span> — файл удалён, история остаётся
-    </div>
-    <div style="display:grid;grid-template-columns:50px 70px 80px 80px 80px 1fr auto;gap:8px;padding:4px 12px;font-size:11px;color:var(--muted2);font-weight:600;margin-bottom:2px">
-      <span>#</span><span>Имя</span><span>Train</span><span>Val</span><span>PPL</span><span></span><span>Действия</span>
-    </div>
-    <div id="epoch-list"></div>
+    <script src="/js/utils.js"></script>
+    <script>
+      let _cfg = {}, _lastStatus = null, _selectedFamilyId = null, _selectedFamilySlug = null,
+        _validateTarget = null; // {vid, epoch}
 
-    <!-- Samples panel (инлайн) -->
-    <div class="samples-panel" id="samples-panel">
-      <div style="font-size:13px;font-weight:600;margin-bottom:10px">📝 Генерации эпохи <b id="samples-epoch-num">—</b></div>
-      <div id="samples-list"></div>
-    </div>
-  </div>
+      const PM = {
+        nano: { name: 'Nano', color: 'var(--green)', desc: '~4M параметров.' },
+        small: { name: 'Small', color: 'var(--accent)', desc: '~15M параметров.' },
+        medium: { name: 'Medium', color: 'var(--accent2)', desc: '~50M параметров.' },
+        custom: { name: 'Custom', color: 'var(--yellow)', desc: 'Ручная/авто настройка.' },
+      };
 
-  <!-- Загрузка .pt -->
-  <div class="card">
-    <div class="card-title">📦 Загрузить .pt</div>
-    <div class="upload-pt-area" onclick="$('pt-input').click()">
-      📦 Перетащи .pt или нажми
-      <input type="file" id="pt-input" accept=".pt" style="display:none" onchange="handlePtSelect(event)">
-    </div>
-    <div id="pt-status" style="font-size:12px;min-height:18px;margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">📟 Лог <button class="btn btn-ghost btn-sm ml-auto" onclick="$('tlog').innerHTML=''">Очистить</button></div>
-    <div class="log-box scroll-y" id="tlog" style="height:200px"></div>
-  </div>
-</div>
-
-<!-- Modal: новое семейство -->
-<div class="overlay hidden" id="modal-new-family" onclick="closeOverlay(event,'modal-new-family')">
-  <div class="modal modal-sm">
-    <div class="modal-header"><span class="modal-title">🆕 Новое семейство моделей</span><button class="modal-close" onclick="closeModal('modal-new-family')">×</button></div>
-    <div class="modal-body">
-      <div class="form-group">
-        <div class="form-label">Название семейства</div>
-        <input class="inp" id="new-family-name" type="text" placeholder="LexiPem, Роман, Поэзия…">
-        <div class="input-hint">Папка storage/models/<i>название</i> будет создана автоматически</div>
-      </div>
-      <div class="form-group" style="margin-top:10px">
-        <div class="form-label">Заметка (опционально)</div>
-        <input class="inp" id="new-family-notes" type="text" placeholder="датасет, цель…">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-new-family')">Отмена</button>
-      <button class="btn btn-success btn-lg" onclick="createAndTrain()">▶ Создать и обучить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: валидация эпохи -->
-<div class="overlay hidden" id="modal-validate" onclick="closeOverlay(event,'modal-validate')">
-  <div class="modal modal-sm">
-    <div class="modal-header"><span class="modal-title">✓ Сохранить эпоху</span><button class="modal-close" onclick="closeModal('modal-validate')">×</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:var(--muted2);margin-bottom:12px">Введи уникальное имя для этой эпохи. Файл останется навсегда.</p>
-      <div class="form-group">
-        <div class="form-label">Имя модели этой эпохи</div>
-        <input class="inp" id="validate-name" type="text" placeholder="FJI-mini, GP-best, stable-v1…"
-          onkeydown="if(event.key==='Enter')submitValidate()">
-        <div class="input-hint" id="validate-hint">Будет назван: <b id="validate-preview">—</b></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-validate')">Отмена</button>
-      <button class="btn btn-primary btn-lg" onclick="submitValidate()">Сохранить</button>
-    </div>
-  </div>
-</div>
-
-<script src="/js/utils.js"></script>
-<script>
-let _cfg={}, _lastStatus=null, _selectedFamilyId=null, _selectedFamilySlug=null,
-    _validateTarget=null; // {vid, epoch}
-
-const PM={
-  nano:{name:'Nano',color:'var(--green)',desc:'~4M параметров.'},
-  small:{name:'Small',color:'var(--accent)',desc:'~15M параметров.'},
-  medium:{name:'Medium',color:'var(--accent2)',desc:'~50M параметров.'},
-  custom:{name:'Custom',color:'var(--yellow)',desc:'Ручная/авто настройка.'},
-};
-
-function rProfiles(a){
-  const c=$('profile-cards');if(!c)return;
-  c.innerHTML=Object.entries(PM).map(([k,m])=>`
-    <div class="profile-card${a===k?' active':''}" onclick="selProfile('${k}')">
+      function rProfiles(a) {
+        const c = $('profile-cards'); if (!c) return;
+        c.innerHTML = Object.entries(PM).map(([k, m]) => `
+    <div class="profile-card${a === k ? ' active' : ''}" onclick="selProfile('${k}')">
       <h4 style="color:${m.color}">${m.name}</h4><p>${m.desc}</p>
-      ${a===k?'<div class="pc-tag">● АКТИВНЫЙ</div>':''}
+      ${a === k ? '<div class="pc-tag">● АКТИВНЫЙ</div>' : ''}
     </div>`).join('');
-}
-function selProfile(k){_cfg.profile=k;rProfiles(k);toggle('custom-block',k==='custom');updateRamEst();}
-
-function bindParam(sid,nid,vid,fmt){
-  const s=$(sid),n=$(nid),v=$(vid);if(!s)return;
-  s.addEventListener('input',()=>{const val=s.value;if(n)n.value=fmt?fmt(val):val;if(v)v.textContent=fmt?fmt(val):val;updateRamEst();});
-  if(n)n.addEventListener('change',()=>{s.value=n.value;if(v)v.textContent=fmt?fmt(n.value):n.value;updateRamEst();});
-}
-function setParamVal(sid,nid,vid,val,fmt){
-  const s=$(sid),n=$(nid),v=$(vid);
-  if(s)s.value=val;const d=fmt?fmt(val):val;if(n)n.value=d;if(v)v.textContent=d;
-}
-function updateRamEst(){
-  if(_cfg.profile!=='custom'){hide('ram-est');return;}
-  const dm=+($('s-dm')?.value||256),nl=+($('s-nl')?.value||4),df=+($('s-df')?.value||1024),
-        sl=+($('s-sl')?.value||128),bs=+($('s-bs')?.value||32),
-        vs=+($('tok-vocab')?.textContent?.replace(/[^\d]/g,'')||10000);
-  const w=vs*dm*2+sl*dm+nl*(3*dm*dm+dm*dm+2*dm*df);
-  const a=bs*sl*dm*nl*4*8;
-  const mb=Math.round((w+a)*4/1024/1024);
-  tx('ram-est-val',mb);show('ram-est');toggle('ram-warn',mb>900);
-}
-function applyAutoParams(p){
-  setParamVal('s-dm','n-dm','v-dm',p.d_model);setParamVal('s-nh','n-nh','v-nh',p.n_heads);
-  setParamVal('s-nl','n-nl','v-nl',p.n_layers);setParamVal('s-df','n-df','v-df',p.d_ff);
-  setParamVal('s-sl','n-sl','v-sl',p.seq_len);setParamVal('s-bs','n-bs','v-bs',p.batch_size);
-  setParamVal('s-do','n-do','v-do',p.dropout,v=>parseFloat(v).toFixed(2));
-  setParamVal('s-lr','n-lr','v-lr',Math.round((p.lr||5e-4)*1e4));
-  updateRamEst();
-}
-
-async function loadConfig(){
-  _cfg=await apiGet('/api/config');
-  const tf=$('text-file');if(tf)tf.value=_cfg.text_file||'';
-  rProfiles(_cfg.profile||'small');toggle('custom-block',_cfg.profile==='custom');
-  const cu=_cfg.custom||{};
-  setParamVal('s-dm','n-dm','v-dm',cu.d_model||256);setParamVal('s-nh','n-nh','v-nh',cu.n_heads||8);
-  setParamVal('s-nl','n-nl','v-nl',cu.n_layers||4);setParamVal('s-df','n-df','v-df',cu.d_ff||1024);
-  setParamVal('s-sl','n-sl','v-sl',cu.seq_len||128);setParamVal('s-bs','n-bs','v-bs',cu.batch_size||32);
-  setParamVal('s-do','n-do','v-do',cu.dropout||0.15,v=>parseFloat(v).toFixed(2));
-  setParamVal('s-lr','n-lr','v-lr',Math.round((cu.lr||5e-4)*1e4));
-  checkTokStatus();
-  loadFamilies();
-}
-
-async function checkTokStatus(){
-  const s=await apiGet('/api/tokenize/status');
-  if(s.done&&s.stats){
-    tx('tok-vocab',fmtK(s.stats.vocab_size));tx('tok-tokens',fmtK(s.stats.n_tokens));
-    tx('tok-words',fmtK(s.stats.n_words));tx('tok-ok','✓');$('tok-ok').style.color='var(--green)';
-  }
-}
-async function savePath(){await apiPost('/api/config',{text_file:$('text-file')?.value||''});addLog('tlog','Путь сохранён','good');}
-
-let _tokPoll=null;
-async function startTokenize(){
-  const path=$('text-file')?.value||'';if(!path){addLog('tlog','Укажи путь','error');return;}
-  await apiPost('/api/config',{text_file:path});
-  const r=await apiPost('/api/tokenize/start');if(r.error){addLog('tlog','Ошибка: '+r.error,'error');return;}
-  show('tok-prog-wrap');addLog('tlog','Токенизация...','info');
-  if(_tokPoll)clearInterval(_tokPoll);
-  _tokPoll=setInterval(async()=>{
-    const s=await apiGet('/api/tokenize/status');
-    const pb=$('tok-pb');if(pb)pb.style.width=(s.pct||0)+'%';
-    tx('tok-step',s.step||'');tx('tok-pct',(s.pct||0)+'%');
-    if(s.done){
-      clearInterval(_tokPoll);hide('tok-prog-wrap');
-      if(s.stats){tx('tok-vocab',fmtK(s.stats.vocab_size));tx('tok-tokens',fmtK(s.stats.n_tokens));tx('tok-words',fmtK(s.stats.n_words));tx('tok-ok','✓');$('tok-ok').style.color='var(--green)';}
-      if(s.auto_params){
-        const ap=s.auto_params;applyAutoParams(ap.params);selProfile('custom');show('auto-params-banner');show('auto-badge');
-        tx('auto-ram',ap.ram_mb);tx('auto-tpv',ap.tpv||s.tpv||'—');
-        const rEl=$('auto-reasons');if(rEl)rEl.innerHTML=ap.reasons.map(r=>'• '+escapeHtml(r)).join('<br>');
-        const warns=ap.warnings||s.warnings||[];
-        if(warns.length){show('auto-warnings-banner');const wt=$('auto-warnings-text');if(wt)wt.innerHTML=warns.map(w=>escapeHtml(w)).join('<br>');}
-        await apiPost('/api/config',{profile:'custom',custom:ap.params});
-        addLog('tlog','Авто-настройка: '+ap.reasons[0],'good');
       }
-      addLog('tlog','Токенизация завершена!','good');
-    }
-    if(s.error){clearInterval(_tokPoll);addLog('tlog','Ошибка: '+s.error,'error');}
-  },600);
-}
+      function selProfile(k) { _cfg.profile = k; rProfiles(k); toggle('custom-block', k === 'custom'); updateRamEst(); }
 
-// ── Family management ──
-async function loadFamilies(){
-  const models=await apiGet('/api/models');
-  const el=$('family-list');if(!el)return;
-  if(!models.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px;text-align:center;padding:16px">Нет семейств</div>';return;}
-  el.innerHTML=models.map(m=>`
-    <div class="family-card${_selectedFamilyId===m.id?' active':''}" onclick="selectFamily(${m.id},'${escapeHtml(m.slug)}','${escapeHtml(m.name)}')">
+      function bindParam(sid, nid, vid, fmt) {
+        const s = $(sid), n = $(nid), v = $(vid); if (!s) return;
+        s.addEventListener('input', () => { const val = s.value; if (n) n.value = fmt ? fmt(val) : val; if (v) v.textContent = fmt ? fmt(val) : val; updateRamEst(); });
+        if (n) n.addEventListener('change', () => { s.value = n.value; if (v) v.textContent = fmt ? fmt(n.value) : n.value; updateRamEst(); });
+      }
+      function setParamVal(sid, nid, vid, val, fmt) {
+        const s = $(sid), n = $(nid), v = $(vid);
+        if (s) s.value = val; const d = fmt ? fmt(val) : val; if (n) n.value = d; if (v) v.textContent = d;
+      }
+      function updateRamEst() {
+        if (_cfg.profile !== 'custom') { hide('ram-est'); return; }
+        const dm = +($('s-dm')?.value || 256), nl = +($('s-nl')?.value || 4), df = +($('s-df')?.value || 1024),
+          sl = +($('s-sl')?.value || 128), bs = +($('s-bs')?.value || 32),
+          vs = +($('tok-vocab')?.textContent?.replace(/[^\d]/g, '') || 10000);
+        const w = vs * dm * 2 + sl * dm + nl * (3 * dm * dm + dm * dm + 2 * dm * df);
+        const a = bs * sl * dm * nl * 4 * 8;
+        const mb = Math.round((w + a) * 4 / 1024 / 1024);
+        tx('ram-est-val', mb); show('ram-est'); toggle('ram-warn', mb > 900);
+      }
+      function applyAutoParams(p) {
+        setParamVal('s-dm', 'n-dm', 'v-dm', p.d_model); setParamVal('s-nh', 'n-nh', 'v-nh', p.n_heads);
+        setParamVal('s-nl', 'n-nl', 'v-nl', p.n_layers); setParamVal('s-df', 'n-df', 'v-df', p.d_ff);
+        setParamVal('s-sl', 'n-sl', 'v-sl', p.seq_len); setParamVal('s-bs', 'n-bs', 'v-bs', p.batch_size);
+        setParamVal('s-do', 'n-do', 'v-do', p.dropout, v => parseFloat(v).toFixed(2));
+        setParamVal('s-lr', 'n-lr', 'v-lr', Math.round((p.lr || 5e-4) * 1e4));
+        updateRamEst();
+      }
+
+      async function loadConfig() {
+        _cfg = await apiGet('/api/config');
+        const tf = $('text-file'); if (tf) tf.value = _cfg.text_file || '';
+        rProfiles(_cfg.profile || 'small'); toggle('custom-block', _cfg.profile === 'custom');
+        const cu = _cfg.custom || {};
+        setParamVal('s-dm', 'n-dm', 'v-dm', cu.d_model || 256); setParamVal('s-nh', 'n-nh', 'v-nh', cu.n_heads || 8);
+        setParamVal('s-nl', 'n-nl', 'v-nl', cu.n_layers || 4); setParamVal('s-df', 'n-df', 'v-df', cu.d_ff || 1024);
+        setParamVal('s-sl', 'n-sl', 'v-sl', cu.seq_len || 128); setParamVal('s-bs', 'n-bs', 'v-bs', cu.batch_size || 32);
+        setParamVal('s-do', 'n-do', 'v-do', cu.dropout || 0.15, v => parseFloat(v).toFixed(2));
+        setParamVal('s-lr', 'n-lr', 'v-lr', Math.round((cu.lr || 5e-4) * 1e4));
+        checkTokStatus();
+        loadFamilies();
+      }
+
+      async function checkTokStatus() {
+        const s = await apiGet('/api/tokenize/status');
+        if (s.done && s.stats) {
+          tx('tok-vocab', fmtK(s.stats.vocab_size)); tx('tok-tokens', fmtK(s.stats.n_tokens));
+          tx('tok-words', fmtK(s.stats.n_words)); tx('tok-ok', '✓'); $('tok-ok').style.color = 'var(--green)';
+        }
+      }
+      async function savePath() { await apiPost('/api/config', { text_file: $('text-file')?.value || '' }); addLog('tlog', 'Путь сохранён', 'good'); }
+
+      let _tokPoll = null;
+      async function startTokenize() {
+        const path = $('text-file')?.value || ''; if (!path) { addLog('tlog', 'Укажи путь', 'error'); return; }
+        await apiPost('/api/config', { text_file: path });
+        const r = await apiPost('/api/tokenize/start'); if (r.error) { addLog('tlog', 'Ошибка: ' + r.error, 'error'); return; }
+        show('tok-prog-wrap'); addLog('tlog', 'Токенизация...', 'info');
+        if (_tokPoll) clearInterval(_tokPoll);
+        _tokPoll = setInterval(async () => {
+          const s = await apiGet('/api/tokenize/status');
+          const pb = $('tok-pb'); if (pb) pb.style.width = (s.pct || 0) + '%';
+          tx('tok-step', s.step || ''); tx('tok-pct', (s.pct || 0) + '%');
+          if (s.done) {
+            clearInterval(_tokPoll); hide('tok-prog-wrap');
+            if (s.stats) { tx('tok-vocab', fmtK(s.stats.vocab_size)); tx('tok-tokens', fmtK(s.stats.n_tokens)); tx('tok-words', fmtK(s.stats.n_words)); tx('tok-ok', '✓'); $('tok-ok').style.color = 'var(--green)'; }
+            if (s.auto_params) {
+              const ap = s.auto_params; applyAutoParams(ap.params); selProfile('custom'); show('auto-params-banner'); show('auto-badge');
+              tx('auto-ram', ap.ram_mb); tx('auto-tpv', ap.tpv || s.tpv || '—');
+              const rEl = $('auto-reasons'); if (rEl) rEl.innerHTML = ap.reasons.map(r => '• ' + escapeHtml(r)).join('<br>');
+              const warns = ap.warnings || s.warnings || [];
+              if (warns.length) { show('auto-warnings-banner'); const wt = $('auto-warnings-text'); if (wt) wt.innerHTML = warns.map(w => escapeHtml(w)).join('<br>'); }
+              await apiPost('/api/config', { profile: 'custom', custom: ap.params });
+              addLog('tlog', 'Авто-настройка: ' + ap.reasons[0], 'good');
+            }
+            addLog('tlog', 'Токенизация завершена!', 'good');
+          }
+          if (s.error) { clearInterval(_tokPoll); addLog('tlog', 'Ошибка: ' + s.error, 'error'); }
+        }, 600);
+      }
+
+      // ── Family management ──
+      async function loadFamilies() {
+        const models = await apiGet('/api/models');
+        const el = $('family-list'); if (!el) return;
+        if (!models.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:16px">Нет семейств</div>'; return; }
+        el.innerHTML = models.map(m => `
+    <div class="family-card${_selectedFamilyId === m.id ? ' active' : ''}" onclick="selectFamily(${m.id},'${escapeHtml(m.slug)}','${escapeHtml(m.name)}')">
       <div style="font-weight:700;font-size:13px">${escapeHtml(m.name)}</div>
-      <div class="family-meta">${m.versions?.length||0} версий &nbsp;·&nbsp; ${m.slug}</div>
+      <div class="family-meta">${m.versions?.length || 0} версий &nbsp;·&nbsp; ${m.slug}</div>
     </div>`).join('');
-}
+      }
 
-function selectFamily(id, slug, name){
-  _selectedFamilyId=id;_selectedFamilySlug=slug;
-  document.querySelectorAll('.family-card').forEach(c=>c.classList.remove('active'));
-  document.querySelectorAll('.family-card').forEach(c=>{if(c.textContent.includes(slug))c.classList.add('active');});
-  tx('family-info',`Выбрано: <b>${escapeHtml(name)}</b> (${slug})`);
-  const btn=$('btn-start');if(btn)btn.disabled=false;
-  // Показываем эпохи
-  $('epoch-panel').style.display='block';
-  tx('epoch-family-name',name);
-  loadFamilyEpochs(id);
-}
+      function selectFamily(id, slug, name) {
+        _selectedFamilyId = id; _selectedFamilySlug = slug;
+        document.querySelectorAll('.family-card').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.family-card').forEach(c => { if (c.textContent.includes(slug)) c.classList.add('active'); });
+        tx('family-info', `Выбрано: <b>${escapeHtml(name)}</b> (${slug})`);
+        const btn = $('btn-start'); if (btn) btn.disabled = false;
+        // Показываем эпохи
+        $('epoch-panel').style.display = 'block';
+        tx('epoch-family-name', name);
+        loadFamilyEpochs(id);
+      }
 
-async function loadFamilyEpochs(modelId){
-  const models=await apiGet('/api/models');
-  const m=models.find(mm=>mm.id===modelId);
-  if(!m||!m.versions||!m.versions.length){$('epoch-list').innerHTML='<div style="color:var(--muted2);font-size:13px;padding:12px">Нет версий / эпох</div>';return;}
-  // Берём последнюю версию
-  const versions=await apiGet('/api/models');
-  const allRows=[];
-  for(const model of models.filter(mm=>mm.id===modelId)){
-    const versData=model.versions||[];
-    for(const ver of versData){
-      const epochs=await apiGet(`/api/models/versions/${ver.id}/epochs/rich`);
-      allRows.push({ver,epochs});
-    }
-  }
-  renderEpochList(allRows);
-}
+      async function loadFamilyEpochs(modelId) {
+        const models = await apiGet('/api/models');
+        const m = models.find(mm => mm.id === modelId);
+        if (!m || !m.versions || !m.versions.length) { $('epoch-list').innerHTML = '<div style="color:var(--muted2);font-size:13px;padding:12px">Нет версий / эпох</div>'; return; }
+        // Берём последнюю версию
+        const versions = await apiGet('/api/models');
+        const allRows = [];
+        for (const model of models.filter(mm => mm.id === modelId)) {
+          const versData = model.versions || [];
+          for (const ver of versData) {
+            const epochs = await apiGet(`/api/models/versions/${ver.id}/epochs/rich`);
+            allRows.push({ ver, epochs });
+          }
+        }
+        renderEpochList(allRows);
+      }
 
-function renderEpochList(versionsWithEpochs){
-  const el=$('epoch-list');if(!el)return;
-  if(!versionsWithEpochs.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px;padding:12px">Нет эпох</div>';return;}
-  let html='';
-  for(const {ver,epochs} of versionsWithEpochs){
-    html+=`<div style="font-size:11px;color:var(--muted2);padding:4px 12px;margin-top:4px">Версия v${ver.version_num} ${ver.notes?'— '+escapeHtml(ver.notes):''}</div>`;
-    if(!epochs.length){html+='<div style="font-size:12px;color:var(--muted);padding:4px 12px">—</div>';continue;}
-    for(const ep of epochs){
-      const isBest=ep.is_best;const isVal=ep.validated;const isDel=ep.ckpt_deleted;
-      let rowClass='epoch-row';
-      if(isDel)rowClass+=' ckpt-deleted';
-      else if(isBest)rowClass+=' best';
-      else if(isVal)rowClass+=' validated';
-      else rowClass+=' unvalidated';
+      function renderEpochList(versionsWithEpochs) {
+        const el = $('epoch-list'); if (!el) return;
+        if (!versionsWithEpochs.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;padding:12px">Нет эпох</div>'; return; }
+        let html = '';
+        for (const { ver, epochs } of versionsWithEpochs) {
+          html += `<div style="font-size:11px;color:var(--muted2);padding:4px 12px;margin-top:4px">Версия v${ver.version_num} ${ver.notes ? '— ' + escapeHtml(ver.notes) : ''}</div>`;
+          if (!epochs.length) { html += '<div style="font-size:12px;color:var(--muted);padding:4px 12px">—</div>'; continue; }
+          for (const ep of epochs) {
+            const isBest = ep.is_best; const isVal = ep.validated; const isDel = ep.ckpt_deleted;
+            let rowClass = 'epoch-row';
+            if (isDel) rowClass += ' ckpt-deleted';
+            else if (isBest) rowClass += ' best';
+            else if (isVal) rowClass += ' validated';
+            else rowClass += ' unvalidated';
 
-      let tag='';
-      if(isBest&&!isDel)tag=`<span class="epoch-tag tag-best">★ лучшая</span>`;
-      else if(isVal&&!isDel)tag=`<span class="epoch-tag tag-validated">✓ ${escapeHtml(ep.custom_name||'')}</span>`;
-      else if(isDel)tag=`<span class="epoch-tag tag-deleted">✕ удалена</span>`;
-      else tag=`<span class="epoch-tag tag-unval">● не сохранена</span>`;
+            let tag = '';
+            if (isBest && !isDel) tag = `<span class="epoch-tag tag-best">★ лучшая</span>`;
+            else if (isVal && !isDel) tag = `<span class="epoch-tag tag-validated">✓ ${escapeHtml(ep.custom_name || '')}</span>`;
+            else if (isDel) tag = `<span class="epoch-tag tag-deleted">✕ удалена</span>`;
+            else tag = `<span class="epoch-tag tag-unval">● не сохранена</span>`;
 
-      const name=ep.custom_name||'—';
-      html+=`<div class="${rowClass}">
+            const name = ep.custom_name || '—';
+            html += `<div class="${rowClass}">
         <span style="color:var(--muted2)">#${ep.epoch}</span>
         <span style="font-size:11px;color:var(--muted2)">${escapeHtml(name)}</span>
-        <span style="color:#93c5fd">${ep.train_loss?.toFixed(3)||'—'}</span>
-        <span style="color:var(--green)">${ep.val_loss?.toFixed(3)||'—'}</span>
-        <span>${ep.val_ppl?.toFixed(0)||'—'}</span>
+        <span style="color:#93c5fd">${ep.train_loss?.toFixed(3) || '—'}</span>
+        <span style="color:var(--green)">${ep.val_loss?.toFixed(3) || '—'}</span>
+        <span>${ep.val_ppl?.toFixed(0) || '—'}</span>
         <span>${tag}</span>
         <div class="epoch-actions">
           <button class="ep-btn ep-btn-check" onclick="checkEpoch(${ver.id},${ep.epoch})" title="Посмотреть генерации">Check</button>
-          ${!isVal&&!isBest&&!isDel?`<button class="ep-btn ep-btn-save" onclick="openValidateModal(${ver.id},${ep.epoch},'${escapeHtml(ep.custom_name||'')}')">Сохранить</button>`:''}
-          ${!isDel&&!isBest?`<button class="ep-btn ep-btn-del" onclick="deleteEpochCkpt(${ver.id},${ep.epoch})">Удалить</button>`:''}
+          ${!isVal && !isBest && !isDel ? `<button class="ep-btn ep-btn-save" onclick="openValidateModal(${ver.id},${ep.epoch},'${escapeHtml(ep.custom_name || '')}')">Сохранить</button>` : ''}
+          ${!isDel && !isBest ? `<button class="ep-btn ep-btn-del" onclick="deleteEpochCkpt(${ver.id},${ep.epoch})">Удалить</button>` : ''}
         </div>
       </div>`;
-    }
-  }
-  el.innerHTML=html;
-}
+          }
+        }
+        el.innerHTML = html;
+      }
 
-async function checkEpoch(vid, epoch){
-  const panel=$('samples-panel');const list=$('samples-list');
-  if(!panel||!list)return;
-  if(panel.style.display==='block'&&panel.dataset.epoch==epoch){panel.style.display='none';return;}
-  panel.dataset.epoch=epoch;tx('samples-epoch-num',epoch);
-  list.innerHTML='<div style="color:var(--muted2);font-size:13px">Загружаю...</div>';
-  panel.style.display='block';
-  const samples=await apiGet(`/api/models/versions/${vid}/epochs/${epoch}/samples`);
-  if(!samples.length){list.innerHTML='<div style="color:var(--muted2);font-size:13px;text-align:center;padding:16px">Генерации не сохранены для этой эпохи</div>';return;}
-  list.innerHTML=samples.map(s=>{
-    let params='';try{const p=typeof s.params==='string'?JSON.parse(s.params):s.params;params=`temp=${p.temperature||'?'} top_k=${p.top_k||'?'} top_p=${p.top_p||'?'}`;}catch(e){}
-    return`<div class="sample-card">
+      async function checkEpoch(vid, epoch) {
+        const panel = $('samples-panel'); const list = $('samples-list');
+        if (!panel || !list) return;
+        if (panel.style.display === 'block' && panel.dataset.epoch == epoch) { panel.style.display = 'none'; return; }
+        panel.dataset.epoch = epoch; tx('samples-epoch-num', epoch);
+        list.innerHTML = '<div style="color:var(--muted2);font-size:13px">Загружаю...</div>';
+        panel.style.display = 'block';
+        const samples = await apiGet(`/api/models/versions/${vid}/epochs/${epoch}/samples`);
+        if (!samples.length) { list.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:16px">Генерации не сохранены для этой эпохи</div>'; return; }
+        list.innerHTML = samples.map(s => {
+          let params = ''; try { const p = typeof s.params === 'string' ? JSON.parse(s.params) : s.params; params = `temp=${p.temperature || '?'} top_k=${p.top_k || '?'} top_p=${p.top_p || '?'}`; } catch (e) { }
+          return `<div class="sample-card">
       <div class="sample-params">Набор #${s.sample_num} | ${escapeHtml(params)}</div>
-      <div class="sample-text">${escapeHtml(s.text||'')}</div>
+      <div class="sample-text">${escapeHtml(s.text || '')}</div>
     </div>`;
-  }).join('');
-}
+        }).join('');
+      }
 
-function openValidateModal(vid, epoch, currentName){
-  _validateTarget={vid,epoch};
-  const inp=$('validate-name');if(inp){inp.value=currentName||'';inp.oninput=()=>{tx('validate-preview',inp.value.trim()||'...');};if(currentName)inp.dispatchEvent(new Event('input'));}
-  openModal('modal-validate');
-}
-async function submitValidate(){
-  const name=($('validate-name')?.value||'').trim();
-  if(!name){alert('Введи имя');return;}
-  if(!_validateTarget)return;
-  const r=await apiPost(`/api/models/versions/${_validateTarget.vid}/epochs/${_validateTarget.epoch}/validate`,{name});
-  if(r.error){alert(r.error);return;}
-  closeModal('modal-validate');
-  addLog('tlog',`Эпоха #${_validateTarget.epoch} сохранена как "${name}"`, 'good');
-  loadFamilyEpochs(_selectedFamilyId);
-}
+      function openValidateModal(vid, epoch, currentName) {
+        _validateTarget = { vid, epoch };
+        const inp = $('validate-name'); if (inp) { inp.value = currentName || ''; inp.oninput = () => { tx('validate-preview', inp.value.trim() || '...'); }; if (currentName) inp.dispatchEvent(new Event('input')); }
+        openModal('modal-validate');
+      }
+      async function submitValidate() {
+        const name = ($('validate-name')?.value || '').trim();
+        if (!name) { alert('Введи имя'); return; }
+        if (!_validateTarget) return;
+        const r = await apiPost(`/api/models/versions/${_validateTarget.vid}/epochs/${_validateTarget.epoch}/validate`, { name });
+        if (r.error) { alert(r.error); return; }
+        closeModal('modal-validate');
+        addLog('tlog', `Эпоха #${_validateTarget.epoch} сохранена как "${name}"`, 'good');
+        loadFamilyEpochs(_selectedFamilyId);
+      }
 
-async function deleteEpochCkpt(vid, epoch){
-  if(!confirm(`Удалить файл .pt для эпохи #${epoch}? История и генерации останутся.`))return;
-  const r=await apiPost(`/api/models/versions/${vid}/epochs/${epoch}/delete_ckpt`);
-  if(r.ok){addLog('tlog',`Файл эпохи #${epoch} удалён (история сохранена)`,'warn');loadFamilyEpochs(_selectedFamilyId);}
-}
+      async function deleteEpochCkpt(vid, epoch) {
+        if (!confirm(`Удалить файл .pt для эпохи #${epoch}? История и генерации останутся.`)) return;
+        const r = await apiPost(`/api/models/versions/${vid}/epochs/${epoch}/delete_ckpt`);
+        if (r.ok) { addLog('tlog', `Файл эпохи #${epoch} удалён (история сохранена)`, 'warn'); loadFamilyEpochs(_selectedFamilyId); }
+      }
 
-// ── Train ──
-function getCustomParams(){return{d_model:+($('s-dm')?.value||256),n_heads:+($('s-nh')?.value||8),n_layers:+($('s-nl')?.value||4),d_ff:+($('s-df')?.value||1024),seq_len:+($('s-sl')?.value||128),batch_size:+($('s-bs')?.value||32),dropout:+($('s-do')?.value||0.15),lr:+($('s-lr')?.value||5)*1e-4};}
+      // ── Train ──
+      function getCustomParams() { return { d_model: +($('s-dm')?.value || 256), n_heads: +($('s-nh')?.value || 8), n_layers: +($('s-nl')?.value || 4), d_ff: +($('s-df')?.value || 1024), seq_len: +($('s-sl')?.value || 128), batch_size: +($('s-bs')?.value || 32), dropout: +($('s-do')?.value || 0.15), lr: +($('s-lr')?.value || 5) * 1e-4 }; }
 
-async function createAndTrain(){
-  const name=($('new-family-name')?.value||'').trim();
-  if(!name){alert('Введи название');return;}
-  closeModal('modal-new-family');
-  const r=await apiPost('/api/models',{name});
-  if(r.error){addLog('tlog','Ошибка создания: '+r.error,'error');return;}
-  await loadFamilies();
-  selectFamily(r.id,r.slug||'',name);
-  await saveParamsAndTrain(r.id,($('new-family-notes')?.value||''));
-}
+      async function createAndTrain() {
+        const name = ($('new-family-name')?.value || '').trim();
+        if (!name) { alert('Введи название'); return; }
+        closeModal('modal-new-family');
+        const r = await apiPost('/api/models', { name });
+        if (r.error) { addLog('tlog', 'Ошибка создания: ' + r.error, 'error'); return; }
+        await loadFamilies();
+        selectFamily(r.id, r.slug || '', name);
+        await saveParamsAndTrain(r.id, ($('new-family-notes')?.value || ''));
+      }
 
-async function trainStart(){
-  if(!_selectedFamilyId)return;
-  await saveParamsAndTrain(_selectedFamilyId,'');
-}
+      async function trainStart() {
+        if (!_selectedFamilyId) return;
+        await saveParamsAndTrain(_selectedFamilyId, '');
+      }
 
-async function saveParamsAndTrain(modelId, notes){
-  if(_cfg.profile==='custom')await apiPost('/api/config',{profile:'custom',custom:getCustomParams()});
-  else await apiPost('/api/config',{profile:_cfg.profile});
-  const r=await apiPost('/api/train/start',{model_id:modelId,notes});
-  addLog('tlog',r.error?'Ошибка: '+r.error:'Обучение запущено',r.error?'error':'good');
-}
-async function trainStop(){const r=await apiPost('/api/train/stop');addLog('tlog',r.message||'Стоп','warn');}
+      async function saveParamsAndTrain(modelId, notes) {
+        if (_cfg.profile === 'custom') await apiPost('/api/config', { profile: 'custom', custom: getCustomParams() });
+        else await apiPost('/api/config', { profile: _cfg.profile });
+        const r = await apiPost('/api/train/start', { model_id: modelId, notes });
+        addLog('tlog', r.error ? 'Ошибка: ' + r.error : 'Обучение запущено', r.error ? 'error' : 'good');
+      }
+      async function trainStop() { const r = await apiPost('/api/train/stop'); addLog('tlog', r.message || 'Стоп', 'warn'); }
 
-// .pt upload
-async function handlePtSelect(e){
-  const file=e.target.files[0];if(!file)return;
-  const st=$('pt-status');if(st)st.textContent='Загрузка...';
-  const form=new FormData();form.append('file',file);
-  const r=await fetch('/api/model/upload',{method:'POST',body:form});
-  const data=await r.json();
-  if(data.error){if(st){st.style.color='var(--red)';st.textContent='❌ '+data.error;}return;}
-  if(st){st.style.color='var(--green)';st.textContent=`✅ Загружено: vocab=${fmtK(data.vocab_size)}, epoch=${data.epoch}`;}
-  addLog('tlog',`Модель загружена`,'good');
-}
+      // .pt upload
+      async function handlePtSelect(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const st = $('pt-status'); if (st) st.textContent = 'Загрузка...';
+        const form = new FormData(); form.append('file', file);
+        const r = await fetch('/api/model/upload', { method: 'POST', body: form });
+        const data = await r.json();
+        if (data.error) { if (st) { st.style.color = 'var(--red)'; st.textContent = '❌ ' + data.error; } return; }
+        if (st) { st.style.color = 'var(--green)'; st.textContent = `✅ Загружено: vocab=${fmtK(data.vocab_size)}, epoch=${data.epoch}`; }
+        addLog('tlog', `Модель загружена`, 'good');
+      }
 
-onSSE(function(d){
-  const s=d.status,running=s==='running';
-  toggle('btn-stop',running);const bs=$('btn-start');if(bs)bs.disabled=running||!_selectedFamilyId;
-  const ep=d.epoch_pct||0,pb=$('t-pb');if(pb)pb.style.width=ep+'%';
-  tx('t-pct',ep+'%');tx('t-ep',d.current_epoch||'?');tx('t-bt',d.current_batch||'?');tx('t-tot',d.n_train_batches||'?');
-  tx('t-eta',d.epoch_eta_fmt||'—');tx('t-loss',fmt(d.train_loss,4));tx('t-vl',fmt(d.val_loss,4));
-  const SCL={idle:'sp-idle',running:'sp-running',paused:'sp-paused',finished:'sp-finished',error:'sp-error',waiting:'sp-idle'};
-  const SLB={idle:'Ожидание',running:'Обучение',paused:'Пауза',finished:'Готово',error:'Ошибка'};
-  const sp=$('nav-status');if(sp)sp.className='status-pill '+(SCL[s]||'sp-idle');
-  tx('nav-status-txt',SLB[s]||s||'—');
-  if(s!==_lastStatus){
-    if(s==='finished'&&_selectedFamilyId)loadFamilyEpochs(_selectedFamilyId);
-    _lastStatus=s;
-  }
-  // Периодически обновляем список эпох при обучении
-  if(running&&_selectedFamilyId&&d.current_epoch&&d.current_batch<=5)loadFamilyEpochs(_selectedFamilyId);
-});
+      onSSE(function (d) {
+        const s = d.status, running = s === 'running';
+        toggle('btn-stop', running); const bs = $('btn-start'); if (bs) bs.disabled = running || !_selectedFamilyId;
+        const ep = d.epoch_pct || 0, pb = $('t-pb'); if (pb) pb.style.width = ep + '%';
+        tx('t-pct', ep + '%'); tx('t-ep', d.current_epoch || '?'); tx('t-bt', d.current_batch || '?'); tx('t-tot', d.n_train_batches || '?');
+        tx('t-eta', d.epoch_eta_fmt || '—'); tx('t-loss', fmt(d.train_loss, 4)); tx('t-vl', fmt(d.val_loss, 4));
+        const SCL = { idle: 'sp-idle', running: 'sp-running', paused: 'sp-paused', finished: 'sp-finished', error: 'sp-error', waiting: 'sp-idle' };
+        const SLB = { idle: 'Ожидание', running: 'Обучение', paused: 'Пауза', finished: 'Готово', error: 'Ошибка' };
+        const sp = $('nav-status'); if (sp) sp.className = 'status-pill ' + (SCL[s] || 'sp-idle');
+        tx('nav-status-txt', SLB[s] || s || '—');
+        if (s !== _lastStatus) {
+          if (s === 'finished' && _selectedFamilyId) loadFamilyEpochs(_selectedFamilyId);
+          _lastStatus = s;
+        }
+        // Периодически обновляем список эпох при обучении
+        if (running && _selectedFamilyId && d.current_epoch && d.current_batch <= 5) loadFamilyEpochs(_selectedFamilyId);
+      });
 
-document.addEventListener('DOMContentLoaded',()=>{
-  ['s-dm','s-nh','s-nl','s-df','s-sl','s-bs'].forEach(id=>bindParam(id,id.replace('s-','n-'),id.replace('s-','v-')));
-  bindParam('s-do','n-do','v-do',v=>parseFloat(v).toFixed(2));
-  bindParam('s-lr','n-lr','v-lr');
-  loadConfig();
-});
-</script>
+      document.addEventListener('DOMContentLoaded', () => {
+        ['s-dm', 's-nh', 's-nl', 's-df', 's-sl', 's-bs'].forEach(id => bindParam(id, id.replace('s-', 'n-'), id.replace('s-', 'v-')));
+        bindParam('s-do', 'n-do', 'v-do', v => parseFloat(v).toFixed(2));
+        bindParam('s-lr', 'n-lr', 'v-lr');
+        loadConfig();
+      });
+    </script>
 </body>
+
 </html>

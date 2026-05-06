@@ -1,16 +1,8 @@
-"""
-core/db.py — SQLite: пользователи, чаты, модели, версии, эпохи.
-
-Структура моделей:
-  models:    имя модели (напр. "Роман-1"), создана когда
-  model_versions: версия = один запуск обучения (params + best_epoch)
-  training_epochs: история всех эпох, привязана к version_id
-"""
-
 import sqlite3
 import hashlib
 import secrets
 import time
+import json
 from pathlib import Path
 from core.config import DB_FILE, ADMIN_USERNAME, ADMIN_PASSWORD, slugify
 
@@ -21,6 +13,12 @@ def get_conn():
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+def _ensure_col(conn, table, col, defn):
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    if col not in [r[1] for r in rows]:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
 
 
 def _ensure_model_slug_column(conn):
@@ -43,20 +41,21 @@ def _ensure_model_slug_column(conn):
 
 def init_db():
     conn = get_conn()
-    conn.executescript(
-        """
+    conn.executescript("""
     CREATE TABLE IF NOT EXISTS users (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
         username  TEXT    UNIQUE NOT NULL,
         pw_hash   TEXT    NOT NULL,
         salt      TEXT    NOT NULL,
         role      TEXT    NOT NULL DEFAULT 'user',
+        admin_ip  TEXT,
         created   INTEGER NOT NULL DEFAULT (strftime('%s','now'))
     );
     CREATE TABLE IF NOT EXISTS sessions (
         token    TEXT    PRIMARY KEY,
         user_id  INTEGER NOT NULL REFERENCES users(id),
-        expires  INTEGER NOT NULL
+        expires  INTEGER NOT NULL,
+        ip       TEXT
     );
     CREATE TABLE IF NOT EXISTS chats (
         id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,8 +89,6 @@ def init_db():
         words     INTEGER DEFAULT 0,
         ts        INTEGER NOT NULL DEFAULT (strftime('%s','now'))
     );
-
-    -- Модели и их версии
     CREATE TABLE IF NOT EXISTS models (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
         name      TEXT    NOT NULL,
@@ -122,6 +119,9 @@ def init_db():
         lr            REAL,
         duration      REAL,
         is_best       INTEGER DEFAULT 0,
+        validated     INTEGER DEFAULT 0,
+        custom_name   TEXT    DEFAULT '',
+        ckpt_deleted  INTEGER DEFAULT 0,
         ts            INTEGER NOT NULL DEFAULT (strftime('%s','now'))
     );
     CREATE TABLE IF NOT EXISTS model_samples (
@@ -134,21 +134,40 @@ def init_db():
         saved_name    TEXT,
         created       INTEGER NOT NULL DEFAULT (strftime('%s','now'))
     );
-
+    CREATE TABLE IF NOT EXISTS gen_queue (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL REFERENCES users(id),
+        request_id TEXT    NOT NULL UNIQUE,
+        status     TEXT    NOT NULL DEFAULT 'waiting',
+        prompt     TEXT,
+        params     TEXT,
+        result     TEXT,
+        error      TEXT,
+        created    INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+        started    INTEGER,
+        finished   INTEGER
+    );
     CREATE INDEX IF NOT EXISTS idx_msgs_chat   ON messages(chat_id);
     CREATE INDEX IF NOT EXISTS idx_corr_wrong  ON word_corrections(wrong);
     CREATE INDEX IF NOT EXISTS idx_ds_user     ON user_datasets(user_id);
     CREATE INDEX IF NOT EXISTS idx_mv_model    ON model_versions(model_id);
     CREATE INDEX IF NOT EXISTS idx_ep_version  ON training_epochs(version_id);
-    """
-    )
+    CREATE INDEX IF NOT EXISTS idx_queue_user  ON gen_queue(user_id, status);
+    """)
     conn.commit()
     try:
         _ensure_model_slug_column(conn)
     except Exception:
         pass
+    # Migration: add admin_ip if missing
+    try:
+        _ensure_col(conn, "users", "admin_ip", "TEXT")
+        _ensure_col(conn, "sessions", "ip", "TEXT")
+        conn.commit()
+    except Exception:
+        pass
 
-    # Создаём аккаунт админа если его нет
+    # Create admin if not exists
     row = conn.execute(
         "SELECT id FROM users WHERE username=?", (ADMIN_USERNAME,)
     ).fetchone()
@@ -167,10 +186,48 @@ def _hash(pw: str, salt: str) -> str:
     return hashlib.sha256((salt + pw).encode()).hexdigest()
 
 
-# ── Auth ─────────────────────────────────────
+# ── Admin IP restriction ─────────────────────────────────────────────────────
+# Один администратор на всю локальную сеть (/24 подсеть)
 
 
-def register(username: str, password: str) -> dict:
+def _net24(ip: str) -> str:
+    """Возвращает /24 подсеть IP."""
+    if not ip:
+        return ""
+    parts = ip.split(".")
+    if len(parts) == 4:
+        return ".".join(parts[:3])
+    return ip
+
+
+def _admin_ip_allowed(ip: str) -> tuple:
+    """
+    Возвращает (allowed: bool, reason: str).
+    Разрешает если нет ни одного активного admin, либо если
+    запрашивающий IP в той же /24 подсети.
+    """
+    conn = get_conn()
+    admins = conn.execute(
+        "SELECT admin_ip FROM users WHERE role='admin' AND admin_ip IS NOT NULL AND admin_ip != ''"
+    ).fetchall()
+    conn.close()
+    if not admins:
+        return True, ""
+    my_net = _net24(ip)
+    for row in admins:
+        admin_net = _net24(row["admin_ip"])
+        if admin_net and my_net and admin_net == my_net:
+            return True, ""
+    return (
+        False,
+        "Администратор уже зарегистрирован в другой подсети. Только один администратор разрешён в локальной сети.",
+    )
+
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+
+def register(username: str, password: str, ip: str = "") -> dict:
     salt = secrets.token_hex(16)
     pw_hash = _hash(password, salt)
     try:
@@ -187,10 +244,10 @@ def register(username: str, password: str) -> dict:
         return {"ok": False, "error": "Имя пользователя уже занято"}
 
 
-def login(username: str, password: str) -> dict:
+def login(username: str, password: str, ip: str = "") -> dict:
     conn = get_conn()
     row = conn.execute(
-        "SELECT id, pw_hash, salt, role FROM users WHERE username=?",
+        "SELECT id, pw_hash, salt, role, admin_ip FROM users WHERE username=?",
         (username.strip(),),
     ).fetchone()
     conn.close()
@@ -198,12 +255,25 @@ def login(username: str, password: str) -> dict:
         return {"ok": False, "error": "Пользователь не найден"}
     if _hash(password, row["salt"]) != row["pw_hash"]:
         return {"ok": False, "error": "Неверный пароль"}
+
+    # Проверка IP для администратора
+    if row["role"] == "admin" and ip:
+        allowed, reason = _admin_ip_allowed(ip)
+        if not allowed:
+            return {"ok": False, "error": reason}
+        # Запоминаем IP администратора при первом входе
+        if not row["admin_ip"]:
+            conn = get_conn()
+            conn.execute("UPDATE users SET admin_ip=? WHERE id=?", (ip, row["id"]))
+            conn.commit()
+            conn.close()
+
     token = secrets.token_hex(32)
     expires = int(time.time()) + 86400 * 30
     conn = get_conn()
     conn.execute(
-        "INSERT INTO sessions (token, user_id, expires) VALUES (?,?,?)",
-        (token, row["id"], expires),
+        "INSERT INTO sessions (token, user_id, expires, ip) VALUES (?,?,?,?)",
+        (token, row["id"], expires, ip),
     )
     conn.commit()
     conn.close()
@@ -216,7 +286,7 @@ def login(username: str, password: str) -> dict:
     }
 
 
-def get_user_by_token(token: str) -> dict | None:
+def get_user_by_token(token: str):
     if not token:
         return None
     conn = get_conn()
@@ -237,7 +307,115 @@ def logout(token: str):
     conn.close()
 
 
-# ── Models ───────────────────────────────────
+# ── Queue ────────────────────────────────────────────────────────────────────
+
+
+def queue_add(user_id: int, request_id: str, prompt: str, params: dict) -> int:
+    conn = get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO gen_queue (user_id, request_id, prompt, params) VALUES (?,?,?,?)",
+        (user_id, request_id, prompt, json.dumps(params, ensure_ascii=False)),
+    )
+    conn.commit()
+    pos = conn.execute(
+        "SELECT COUNT(*) FROM gen_queue WHERE status='waiting' AND id <= (SELECT id FROM gen_queue WHERE request_id=?)",
+        (request_id,),
+    ).fetchone()[0]
+    conn.close()
+    return pos
+
+
+def queue_status(request_id: str) -> dict:
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT id, status, result, error FROM gen_queue WHERE request_id=?",
+        (request_id,),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return {"found": False}
+    pos = conn.execute(
+        "SELECT COUNT(*) FROM gen_queue WHERE status='waiting' AND id <= ?",
+        (row["id"],),
+    ).fetchone()[0]
+    conn.close()
+    d = dict(row)
+    d["position"] = pos
+    d["found"] = True
+    return d
+
+
+def queue_next_waiting():
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM gen_queue WHERE status='waiting' ORDER BY id ASC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def queue_set_processing(request_id: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE gen_queue SET status='processing', started=? WHERE request_id=?",
+        (int(time.time()), request_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def queue_set_done(request_id: str, result: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE gen_queue SET status='done', result=?, finished=? WHERE request_id=?",
+        (result, int(time.time()), request_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def queue_set_error(request_id: str, error: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE gen_queue SET status='error', error=?, finished=? WHERE request_id=?",
+        (error, int(time.time()), request_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def queue_leave(request_id: str, user_id: int):
+    conn = get_conn()
+    conn.execute(
+        "DELETE FROM gen_queue WHERE request_id=? AND user_id=? AND status='waiting'",
+        (request_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def queue_cleanup(max_age_sec: int = 600):
+    """Удаляем старые завершённые задачи."""
+    cutoff = int(time.time()) - max_age_sec
+    conn = get_conn()
+    conn.execute(
+        "DELETE FROM gen_queue WHERE status IN ('done','error') AND finished < ?",
+        (cutoff,),
+    )
+    conn.commit()
+    conn.close()
+
+
+def queue_count_waiting() -> int:
+    conn = get_conn()
+    n = conn.execute(
+        "SELECT COUNT(*) FROM gen_queue WHERE status='waiting'"
+    ).fetchone()[0]
+    conn.close()
+    return n
+
+
+# ── Models ───────────────────────────────────────────────────────────────────
 
 
 def create_model(name: str) -> int:
@@ -255,7 +433,7 @@ def create_model(name: str) -> int:
     return mid
 
 
-def get_model_by_id(model_id: int) -> dict | None:
+def get_model_by_id(model_id: int):
     conn = get_conn()
     row = conn.execute(
         "SELECT id, name, slug, created FROM models WHERE id=?", (model_id,)
@@ -274,7 +452,6 @@ def get_models() -> list:
 
 
 def rename_model(model_id: int, name: str):
-    slug = slugify(name)
     conn = get_conn()
     conn.execute("UPDATE models SET name=? WHERE id=?", (name, model_id))
     conn.commit()
@@ -284,8 +461,6 @@ def rename_model(model_id: int, name: str):
 def create_model_version(
     model_id: int, params: dict, vocab_size: int, notes: str = ""
 ) -> int:
-    import json
-
     conn = get_conn()
     vnum = (
         conn.execute(
@@ -294,8 +469,7 @@ def create_model_version(
         or 0
     ) + 1
     conn.execute(
-        """INSERT INTO model_versions (model_id, version_num, params, vocab_size, notes)
-           VALUES (?,?,?,?,?)""",
+        "INSERT INTO model_versions (model_id, version_num, params, vocab_size, notes) VALUES (?,?,?,?,?)",
         (model_id, vnum, json.dumps(params, ensure_ascii=False), vocab_size, notes),
     )
     conn.commit()
@@ -305,13 +479,9 @@ def create_model_version(
 
 
 def get_model_versions(model_id: int) -> list:
-    import json
-
     conn = get_conn()
     rows = conn.execute(
-        """SELECT id, version_num, params, vocab_size, best_epoch, best_val_loss,
-                  checkpoint_path, notes, created
-           FROM model_versions WHERE model_id=? ORDER BY version_num DESC""",
+        "SELECT id, version_num, params, vocab_size, best_epoch, best_val_loss, checkpoint_path, notes, created FROM model_versions WHERE model_id=? ORDER BY version_num DESC",
         (model_id,),
     ).fetchall()
     conn.close()
@@ -327,17 +497,13 @@ def get_model_versions(model_id: int) -> list:
     return result
 
 
-def get_model_version_by_id(version_id: int) -> dict | None:
-    import json
-
+def get_model_version_by_id(version_id: int):
     conn = get_conn()
     row = conn.execute(
         """SELECT mv.id, mv.version_num, mv.best_epoch, mv.best_val_loss,
                   mv.checkpoint_path, mv.params, mv.notes,
                   m.id as model_id, m.name as model_name, m.slug as model_slug
-           FROM model_versions mv
-           JOIN models m ON m.id = mv.model_id
-           WHERE mv.id = ?""",
+           FROM model_versions mv JOIN models m ON m.id=mv.model_id WHERE mv.id=?""",
         (version_id,),
     ).fetchone()
     conn.close()
@@ -353,10 +519,7 @@ def get_model_version_by_id(version_id: int) -> dict | None:
 
 
 def update_model_version(
-    version_id: int,
-    best_epoch: int = None,
-    best_val_loss: float = None,
-    checkpoint_path: str = None,
+    version_id: int, best_epoch=None, best_val_loss=None, checkpoint_path=None
 ):
     conn = get_conn()
     if best_epoch is not None:
@@ -379,16 +542,12 @@ def update_model_version(
 
 
 def get_all_versions_flat() -> list:
-    """Все версии всех моделей — для выбора в чате."""
-    import json
-
     conn = get_conn()
     rows = conn.execute(
         """SELECT mv.id, mv.version_num, mv.best_epoch, mv.best_val_loss,
                   mv.checkpoint_path, mv.params, mv.notes,
                   m.id as model_id, m.name as model_name, m.slug as model_slug
-           FROM model_versions mv
-           JOIN models m ON m.id = mv.model_id
+           FROM model_versions mv JOIN models m ON m.id=mv.model_id
            ORDER BY m.created DESC, mv.version_num DESC"""
     ).fetchall()
     conn.close()
@@ -404,7 +563,7 @@ def get_all_versions_flat() -> list:
     return result
 
 
-def get_model_samples(version_id: int, epoch: int | None = None) -> list:
+def get_model_samples(version_id: int, epoch=None) -> list:
     conn = get_conn()
     if epoch is None:
         rows = conn.execute(
@@ -420,16 +579,7 @@ def get_model_samples(version_id: int, epoch: int | None = None) -> list:
     return [dict(r) for r in rows]
 
 
-def add_model_sample(
-    version_id: int,
-    epoch: int,
-    sample_num: int,
-    params: dict,
-    text: str,
-    saved_name: str = None,
-):
-    import json
-
+def add_model_sample(version_id, epoch, sample_num, params, text, saved_name=None):
     conn = get_conn()
     conn.execute(
         "INSERT INTO model_samples (version_id, epoch, sample_num, params, text, saved_name) VALUES (?,?,?,?,?,?)",
@@ -443,9 +593,9 @@ def add_model_sample(
         ),
     )
     conn.commit()
-    sample_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.close()
-    return sample_id
+    return sid
 
 
 def save_model_sample(sample_id: int, saved_name: str):
@@ -464,22 +614,11 @@ def delete_model_sample(sample_id: int):
     conn.close()
 
 
-# ── Training epochs ──────────────────────────
+# ── Training epochs ───────────────────────────────────────────────────────────
 
 
-def save_epoch(version_id: int | None, epoch_data: dict):
+def save_epoch(version_id, epoch_data: dict):
     conn = get_conn()
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS training_epochs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            version_id INTEGER REFERENCES model_versions(id),
-            epoch INTEGER NOT NULL,
-            train_loss REAL, val_loss REAL, train_ppl REAL, val_ppl REAL,
-            lr REAL, duration REAL, is_best INTEGER DEFAULT 0,
-            ts INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-        )"""
-    )
     conn.execute(
         """INSERT INTO training_epochs
            (version_id, epoch, train_loss, val_loss, train_ppl, val_ppl, lr, duration, is_best)
@@ -516,20 +655,8 @@ def get_epochs_for_version(version_id: int) -> list:
 
 
 def get_all_epochs_from_db() -> list:
-    """Полная история текущей версии (для дашборда — берём последнюю)."""
     conn = get_conn()
     try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS training_epochs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                version_id INTEGER,
-                epoch INTEGER NOT NULL,
-                train_loss REAL, val_loss REAL, train_ppl REAL, val_ppl REAL,
-                lr REAL, duration REAL, is_best INTEGER DEFAULT 0,
-                ts INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-            )"""
-        )
         rows = conn.execute(
             "SELECT * FROM training_epochs ORDER BY epoch ASC"
         ).fetchall()
@@ -540,7 +667,7 @@ def get_all_epochs_from_db() -> list:
         return []
 
 
-# ── Chats ────────────────────────────────────
+# ── Chats ─────────────────────────────────────────────────────────────────────
 
 
 def get_chats(user_id: int) -> list:
@@ -549,8 +676,8 @@ def get_chats(user_id: int) -> list:
         """SELECT c.id, c.title, c.updated, c.model_version_id,
                   mv.version_num, m.name as model_name
            FROM chats c
-           LEFT JOIN model_versions mv ON mv.id = c.model_version_id
-           LEFT JOIN models m ON m.id = mv.model_id
+           LEFT JOIN model_versions mv ON mv.id=c.model_version_id
+           LEFT JOIN models m ON m.id=mv.model_id
            WHERE c.user_id=? ORDER BY c.updated DESC""",
         (user_id,),
     ).fetchall()
@@ -621,7 +748,7 @@ def add_message(chat_id: int, role: str, content: str) -> int:
     return mid
 
 
-# ── Corrections ──────────────────────────────
+# ── Corrections ───────────────────────────────────────────────────────────────
 
 
 def add_word_correction(
@@ -652,14 +779,10 @@ def get_all_corrections() -> dict:
         "SELECT wrong, correct FROM word_corrections GROUP BY wrong ORDER BY MAX(ts) DESC"
     ).fetchall()
     conn.close()
-    result = {}
-    for r in rows:
-        if r["wrong"] not in result:
-            result[r["wrong"]] = r["correct"]
-    return result
+    return {r["wrong"]: r["correct"] for r in rows if r["wrong"] not in {}}
 
 
-def get_corrections_as_training_pairs() -> list[tuple[str, str]]:
+def get_corrections_as_training_pairs() -> list:
     conn = get_conn()
     rows = conn.execute(
         "SELECT wrong, correct FROM word_corrections ORDER BY ts ASC"
@@ -668,7 +791,7 @@ def get_corrections_as_training_pairs() -> list[tuple[str, str]]:
     return [(r["wrong"], r["correct"]) for r in rows]
 
 
-# ── Datasets ─────────────────────────────────
+# ── Datasets ──────────────────────────────────────────────────────────────────
 
 
 def add_user_dataset(user_id: int, filename: str, filepath: str, words: int) -> int:
@@ -693,89 +816,54 @@ def get_user_datasets(user_id: int) -> list:
     return [dict(r) for r in rows]
 
 
-def get_all_dataset_paths() -> list[str]:
+def get_all_dataset_paths() -> list:
     conn = get_conn()
     rows = conn.execute("SELECT filepath FROM user_datasets").fetchall()
     conn.close()
     return [r["filepath"] for r in rows]
 
 
-# ── Epoch validation & naming ─────────────────
+# ── Epoch management ──────────────────────────────────────────────────────────
 
-def get_epoch_entry(version_id: int, epoch: int) -> dict | None:
-    """Возвращает запись эпохи из training_epochs."""
+
+def get_epoch_entry(version_id: int, epoch: int):
     conn = get_conn()
     row = conn.execute(
         "SELECT * FROM training_epochs WHERE version_id=? AND epoch=?",
-        (version_id, epoch)
+        (version_id, epoch),
     ).fetchone()
     conn.close()
     return dict(row) if row else None
 
 
 def validate_epoch(version_id: int, epoch: int, custom_name: str) -> dict:
-    """
-    Валидирует эпоху: устанавливает validated=1, custom_name.
-    Возвращает обновлённую запись.
-    """
     conn = get_conn()
-    # Добавляем колонки если их нет (миграция)
-    for col, defval in [("validated", "0"), ("custom_name", "''"), ("ckpt_deleted", "0")]:
-        try:
-            conn.execute(f"ALTER TABLE training_epochs ADD COLUMN {col} INTEGER NOT NULL DEFAULT {defval}")
-        except Exception:
-            pass
-    try:
-        conn.execute(
-            """UPDATE training_epochs
-               SET validated=1, custom_name=?
-               WHERE version_id=? AND epoch=?""",
-            (custom_name.strip(), version_id, epoch)
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    conn.execute(
+        "UPDATE training_epochs SET validated=1, custom_name=? WHERE version_id=? AND epoch=?",
+        (custom_name.strip(), version_id, epoch),
+    )
+    conn.commit()
+    conn.close()
     return get_epoch_entry(version_id, epoch) or {}
 
 
 def delete_epoch_ckpt(version_id: int, epoch: int) -> dict:
-    """
-    Удаляет .pt файл эпохи, но сохраняет запись в БД.
-    Ставит ckpt_deleted=1.
-    """
-    import json
-    from pathlib import Path
     conn = get_conn()
-    # Добавляем колонки если их нет
-    for col, defval in [("validated", "0"), ("custom_name", "''"), ("ckpt_deleted", "0")]:
-        try:
-            conn.execute(f"ALTER TABLE training_epochs ADD COLUMN {col} INTEGER NOT NULL DEFAULT {defval}")
-        except Exception:
-            pass
-
-    # Находим путь к файлу
-    row = conn.execute(
-        "SELECT * FROM training_epochs WHERE version_id=? AND epoch=?",
-        (version_id, epoch)
-    ).fetchone()
     ver = conn.execute(
-        """SELECT mv.id, m.slug FROM model_versions mv
-           JOIN models m ON m.id=mv.model_id WHERE mv.id=?""",
-        (version_id,)
+        "SELECT m.slug FROM model_versions mv JOIN models m ON m.id=mv.model_id WHERE mv.id=?",
+        (version_id,),
     ).fetchone()
     conn.close()
-
     if ver:
         from core.config import model_ckpt_dir
-        ckpt_dir = model_ckpt_dir(ver["slug"])
-        ckpt_file = ckpt_dir / f"epoch_{epoch:04d}.pt"
+
+        ckpt_file = model_ckpt_dir(ver["slug"]) / f"epoch_{epoch:04d}.pt"
         if ckpt_file.exists():
             ckpt_file.unlink()
-
     conn = get_conn()
     conn.execute(
         "UPDATE training_epochs SET ckpt_deleted=1 WHERE version_id=? AND epoch=?",
-        (version_id, epoch)
+        (version_id, epoch),
     )
     conn.commit()
     conn.close()
@@ -783,92 +871,55 @@ def delete_epoch_ckpt(version_id: int, epoch: int) -> dict:
 
 
 def get_epochs_for_chat(version_id: int, top_unvalidated: int = 3) -> list:
-    """
-    Возвращает эпохи доступные для чата:
-    - is_best=1: всегда (авто-валидирована)
-    - validated=1: всегда (ручная валидация)
-    - остальные (невалидированные): только топ-N по лучшему val_loss, только если ckpt_deleted=0
-    """
     conn = get_conn()
-    for col, defval in [("validated", "0"), ("custom_name", "''"), ("ckpt_deleted", "0")]:
-        try:
-            conn.execute(f"ALTER TABLE training_epochs ADD COLUMN {col} INTEGER NOT NULL DEFAULT {defval}")
-            conn.commit()
-        except Exception:
-            pass
-
     rows = conn.execute(
-        """SELECT * FROM training_epochs WHERE version_id=?
-           ORDER BY val_loss ASC""",
-        (version_id,)
+        "SELECT * FROM training_epochs WHERE version_id=? ORDER BY val_loss ASC",
+        (version_id,),
     ).fetchall()
     conn.close()
-
-    result = []
-    unvalidated_count = 0
+    result, unv = [], 0
     for r in rows:
         d = dict(r)
-        d.setdefault("validated", 0)
-        d.setdefault("custom_name", "")
-        d.setdefault("ckpt_deleted", 0)
         if d["is_best"] or d.get("validated"):
             result.append(d)
-        elif d["ckpt_deleted"] == 0 and unvalidated_count < top_unvalidated:
+        elif not d.get("ckpt_deleted") and unv < top_unvalidated:
             result.append(d)
-            unvalidated_count += 1
+            unv += 1
     return result
 
 
 def get_all_epochs_rich(version_id: int) -> list:
-    """Все эпохи с полями validated, custom_name, ckpt_deleted для UI."""
     conn = get_conn()
-    for col, defval in [("validated", "0"), ("custom_name", "''"), ("ckpt_deleted", "0")]:
-        try:
-            conn.execute(f"ALTER TABLE training_epochs ADD COLUMN {col} INTEGER NOT NULL DEFAULT {defval}")
-            conn.commit()
-        except Exception:
-            pass
     rows = conn.execute(
         "SELECT * FROM training_epochs WHERE version_id=? ORDER BY epoch ASC",
-        (version_id,)
+        (version_id,),
     ).fetchall()
     conn.close()
-    result = []
-    for r in rows:
-        d = dict(r)
-        d.setdefault("validated", 0)
-        d.setdefault("custom_name", "")
-        d.setdefault("ckpt_deleted", 0)
-        result.append(d)
-    return result
+    return [dict(r) for r in rows]
 
 
-def get_epoch_ckpt_path(version_id: int, epoch: int) -> str | None:
-    """Возвращает путь к .pt файлу конкретной эпохи."""
+def get_epoch_ckpt_path(version_id: int, epoch: int):
     conn = get_conn()
     ver = conn.execute(
-        """SELECT m.slug FROM model_versions mv
-           JOIN models m ON m.id=mv.model_id WHERE mv.id=?""",
-        (version_id,)
+        "SELECT m.slug FROM model_versions mv JOIN models m ON m.id=mv.model_id WHERE mv.id=?",
+        (version_id,),
     ).fetchone()
     conn.close()
     if not ver:
         return None
     from core.config import model_ckpt_dir
+
     ckpt_dir = model_ckpt_dir(ver["slug"])
     best = ckpt_dir / "best_model.pt"
     if epoch == -1:
         return str(best) if best.exists() else None
-    ep_file = ckpt_dir / f"epoch_{epoch:04d}.pt"
-    if ep_file.exists():
-        return str(ep_file)
-    # Если сам epoch удалён, возвращаем best
+    ep = ckpt_dir / f"epoch_{epoch:04d}.pt"
+    if ep.exists():
+        return str(ep)
     return str(best) if best.exists() else None
 
 
 def get_models_with_versions() -> list:
-    """Семейства моделей со всеми версиями — для Family/Model picker в чате."""
-    import json
     conn = get_conn()
     models = conn.execute(
         "SELECT id, name, slug, created FROM models ORDER BY created DESC"
@@ -877,19 +928,17 @@ def get_models_with_versions() -> list:
     for m in models:
         md = dict(m)
         versions = conn.execute(
-            """SELECT mv.id, mv.version_num, mv.best_epoch, mv.best_val_loss,
-                      mv.checkpoint_path, mv.notes, mv.params
-               FROM model_versions mv WHERE mv.model_id=?
-               ORDER BY mv.version_num ASC""",
-            (m["id"],)
+            "SELECT mv.id, mv.version_num, mv.best_epoch, mv.best_val_loss, mv.checkpoint_path, mv.notes, mv.params FROM model_versions mv WHERE mv.model_id=? ORDER BY mv.version_num ASC",
+            (m["id"],),
         ).fetchall()
         vlist = []
         for v in versions:
             vd = dict(v)
             if vd.get("params"):
-                try: vd["params"] = json.loads(vd["params"])
-                except: pass
-            # Доступные для чата эпохи
+                try:
+                    vd["params"] = json.loads(vd["params"])
+                except Exception:
+                    pass
             vd["chat_epochs"] = get_epochs_for_chat(vd["id"])
             vlist.append(vd)
         md["versions"] = vlist

@@ -1,483 +1,698 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lexis — Чат</title>
-<link rel="stylesheet" href="/css/main.css">
-<style>
-.word-span{cursor:pointer;border-radius:3px;padding:0 1px;transition:background .12s}
-.word-span:hover{background:rgba(79,142,247,.25)}
-.word-span.punct{cursor:default}.word-span.punct:hover{background:none}
-.word-popup{position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;z-index:600;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.5);font-size:13px}
-.word-popup-title{color:var(--muted2);font-size:11px;margin-bottom:8px}
-.word-alt{padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--text);transition:background .12s}
-.word-alt:hover{background:rgba(79,142,247,.15);color:var(--accent)}
-.word-alt.custom-input{display:flex;gap:6px;padding:4px 6px}
-.word-alt.custom-input input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;font-size:12px}
-.word-alt.custom-input button{background:var(--accent);border:none;border-radius:5px;color:#fff;padding:4px 10px;cursor:pointer;font-size:12px}
-.word-alt.gen-btn{color:var(--muted2);font-style:italic;border-top:1px solid var(--border);margin-top:4px;padding-top:8px}
-.msg-actions{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap}
-.msg-copy-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted2);cursor:pointer;padding:2px 8px;font-size:11px;transition:all .12s}
-.msg-copy-btn:hover{border-color:var(--accent);color:var(--accent)}
-.file-upload-area{border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s;color:var(--muted2);font-size:13px}
-.file-upload-area:hover,.file-upload-area.drag{border-color:var(--accent);color:var(--accent)}
-.dataset-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:var(--rs);font-size:13px}
-.param-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.param-label-chat{font-size:11px;color:var(--muted2);min-width:52px;white-space:nowrap}
-.param-num-inp{width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--accent);padding:2px 6px;font-size:12px;font-weight:700}
-.param-num-inp:focus{outline:none;border-color:var(--accent)}
 
-/* Model picker */
-.model-picker{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.picker-col label{font-size:12px;color:var(--muted2);display:block;margin-bottom:4px;font-weight:600}
-.picker-select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);padding:8px 10px;font-size:13px}
-.picker-select:focus{outline:none;border-color:var(--accent)}
-.epoch-opt-best{color:var(--green)}
-.epoch-opt-validated{color:var(--accent)}
-.epoch-opt-unval{color:var(--red)}
-.model-info-bar{background:var(--bg3);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:12px}
-</style>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexis — Чат</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .word-span {
+      cursor: pointer;
+      border-radius: 3px;
+      padding: 0 1px;
+      transition: background .12s
+    }
+
+    .word-span:hover {
+      background: rgba(79, 142, 247, .25)
+    }
+
+    .word-span.punct {
+      cursor: default
+    }
+
+    .word-span.punct:hover {
+      background: none
+    }
+
+    .word-popup {
+      position: fixed;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      z-index: 600;
+      min-width: 180px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+      font-size: 13px
+    }
+
+    .word-popup-title {
+      color: var(--muted2);
+      font-size: 11px;
+      margin-bottom: 8px
+    }
+
+    .word-alt {
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text);
+      transition: background .12s
+    }
+
+    .word-alt:hover {
+      background: rgba(79, 142, 247, .15);
+      color: var(--accent)
+    }
+
+    .word-alt.custom-input {
+      display: flex;
+      gap: 6px;
+      padding: 4px 6px
+    }
+
+    .word-alt.custom-input input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 12px
+    }
+
+    .word-alt.custom-input button {
+      background: var(--accent);
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 12px
+    }
+
+    .word-alt.gen-btn {
+      color: var(--muted2);
+      font-style: italic;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+      padding-top: 8px
+    }
+
+    .msg-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 5px;
+      flex-wrap: wrap
+    }
+
+    .msg-copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted2);
+      cursor: pointer;
+      padding: 2px 8px;
+      font-size: 11px;
+      transition: all .12s
+    }
+
+    .msg-copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--r);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s;
+      color: var(--muted2);
+      font-size: 13px
+    }
+
+    .file-upload-area:hover,
+    .file-upload-area.drag {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .dataset-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg3);
+      border-radius: var(--rs);
+      font-size: 13px
+    }
+
+    .param-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px
+    }
+
+    .param-label-chat {
+      font-size: 11px;
+      color: var(--muted2);
+      min-width: 52px;
+      white-space: nowrap
+    }
+
+    .param-num-inp {
+      width: 60px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      padding: 2px 6px;
+      font-size: 12px;
+      font-weight: 700
+    }
+
+    .param-num-inp:focus {
+      outline: none;
+      border-color: var(--accent)
+    }
+
+    /* Model picker */
+    .model-picker {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px
+    }
+
+    .picker-col label {
+      font-size: 12px;
+      color: var(--muted2);
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 600
+    }
+
+    .picker-select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--rs);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 13px
+    }
+
+    .picker-select:focus {
+      outline: none;
+      border-color: var(--accent)
+    }
+
+    .epoch-opt-best {
+      color: var(--green)
+    }
+
+    .epoch-opt-validated {
+      color: var(--accent)
+    }
+
+    .epoch-opt-unval {
+      color: var(--red)
+    }
+
+    .model-info-bar {
+      background: var(--bg3);
+      border-radius: var(--rs);
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted2);
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- AUTH -->
-<div id="auth-screen" class="auth-wrap hidden">
-  <div class="auth-card">
-    <div class="auth-logo"><div class="auth-logo-icon">L</div><span class="auth-logo-text">Lexis</span></div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Войти</button>
-      <button class="auth-tab" id="tab-reg" onclick="switchTab('reg')">Создать аккаунт</button>
+  <!-- AUTH -->
+  <div id="auth-screen" class="auth-wrap hidden">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">L</div><span class="auth-logo-text">Lexis</span>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Войти</button>
+        <button class="auth-tab" id="tab-reg" onclick="switchTab('reg')">Создать аккаунт</button>
+      </div>
+      <div id="form-login">
+        <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="l-username"
+            type="text" autocomplete="username"></div>
+        <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="l-password"
+            type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="doLogin()">Войти</button>
+      </div>
+      <div id="form-reg" class="hidden">
+        <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="r-username"
+            type="text" autocomplete="username"></div>
+        <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="r-password"
+            type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
+        <button class="btn btn-success btn-lg" style="width:100%;margin-top:8px" onclick="doRegister()">Создать
+          аккаунт</button>
+      </div>
+      <div class="auth-err" id="auth-err"></div>
     </div>
-    <div id="form-login">
-      <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="l-username" type="text" autocomplete="username"></div>
-      <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="l-password" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-      <button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="doLogin()">Войти</button>
-    </div>
-    <div id="form-reg" class="hidden">
-      <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="r-username" type="text" autocomplete="username"></div>
-      <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="r-password" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
-      <button class="btn btn-success btn-lg" style="width:100%;margin-top:8px" onclick="doRegister()">Создать аккаунт</button>
-    </div>
-    <div class="auth-err" id="auth-err"></div>
   </div>
-</div>
 
-<!-- APP -->
-<div id="app-screen" style="display:none;flex-direction:column;height:100vh">
-  <nav class="nav">
-    <a class="nav-logo" href="/"><div class="nav-logo-icon">L</div><span class="nav-logo-text">Lexis</span></a>
-    <div style="display:flex;gap:2px">
-      <a class="nav-link" href="/">📊 Дашборд</a>
-      <a class="nav-link admin-only hidden" href="/train.html">🧠 Обучение</a>
-      <a class="nav-link active" href="/chat.html">💬 Чат</a>
-      <a class="nav-link admin-only hidden" href="/settings.html">⚙️ Настройки</a>
-    </div>
-    <div class="nav-right">
-      <div class="nav-user"><span class="nav-user-dot"></span><span id="nav-username">—</span></div>
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Выйти</button>
-    </div>
-  </nav>
-
-  <div class="chat-layout" style="flex:1;overflow:hidden">
-    <div class="chat-sidebar">
-      <div class="chat-sidebar-header">
-        <span class="chat-sidebar-title">Чаты</span>
-        <button class="icon-btn ml-auto" onclick="newChat()" style="font-size:18px">＋</button>
+  <!-- APP -->
+  <div id="app-screen" style="display:none;flex-direction:column;height:100vh">
+    <nav class="nav">
+      <a class="nav-logo" href="/">
+        <div class="nav-logo-icon">L</div><span class="nav-logo-text">Lexis</span>
+      </a>
+      <div style="display:flex;gap:2px">
+        <a class="nav-link" href="/">📊 Дашборд</a>
+        <a class="nav-link admin-only hidden" href="/train.html">🧠 Обучение</a>
+        <a class="nav-link active" href="/chat.html">💬 Чат</a>
+        <a class="nav-link admin-only hidden" href="/settings.html">⚙️ Настройки</a>
       </div>
-      <div class="chat-list" id="chat-list"></div>
-      <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
-        <button class="btn btn-outline btn-sm" style="width:100%" onclick="openModal('modal-corrections')">📝 Правки</button>
-        <button class="btn btn-outline btn-sm" style="width:100%" onclick="openModal('modal-datasets')">📂 Датасеты</button>
+      <div class="nav-right">
+        <div class="nav-user"><span class="nav-user-dot"></span><span id="nav-username">—</span></div>
+        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Выйти</button>
       </div>
-    </div>
+    </nav>
 
-    <div class="chat-main">
-      <div class="chat-header" id="chat-header" style="display:none">
-        <span class="chat-header-title" id="chat-title">Чат</span>
-        <button class="icon-btn" onclick="openRenameModal()">✏️</button>
-        <button class="icon-btn" onclick="deleteCurrentChat()" style="color:var(--red)">🗑</button>
-      </div>
-
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-empty" id="chat-empty">
-          <div class="chat-empty-icon">💬</div>
-          <h3>Выбери чат или создай новый</h3>
-          <button class="btn btn-primary" onclick="newChat()">＋ Новый чат</button>
+    <div class="chat-layout" style="flex:1;overflow:hidden">
+      <div class="chat-sidebar">
+        <div class="chat-sidebar-header">
+          <span class="chat-sidebar-title">Чаты</span>
+          <button class="icon-btn ml-auto" onclick="newChat()" style="font-size:18px">＋</button>
+        </div>
+        <div class="chat-list" id="chat-list"></div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-outline btn-sm" style="width:100%" onclick="openModal('modal-corrections')">📝
+            Правки</button>
+          <button class="btn btn-outline btn-sm" style="width:100%" onclick="openModal('modal-datasets')">📂
+            Датасеты</button>
         </div>
       </div>
 
-      <div id="chat-input-area" style="display:none">
-        <div class="chat-input-wrap">
-          <!-- Family / Model picker -->
-          <div class="model-picker">
-            <div>
-              <label>🏷 Семейство (Family)</label>
-              <select class="picker-select" id="sel-family" onchange="onFamilyChange()">
-                <option value="">— выбери семейство —</option>
-              </select>
-            </div>
-            <div>
-              <label>🧠 Модель (эпоха)</label>
-              <select class="picker-select" id="sel-model" onchange="onModelChange()">
-                <option value="">— выбери модель —</option>
-              </select>
-            </div>
-          </div>
-          <div class="model-info-bar" id="model-info-bar" style="display:none">
-            <span id="model-info-text">—</span>
-          </div>
+      <div class="chat-main">
+        <div class="chat-header" id="chat-header" style="display:none">
+          <span class="chat-header-title" id="chat-title">Чат</span>
+          <button class="icon-btn" onclick="openRenameModal()">✏️</button>
+          <button class="icon-btn" onclick="deleteCurrentChat()" style="color:var(--red)">🗑</button>
+        </div>
 
-          <!-- Параметры -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin:10px 0 8px">
-            <div>
-              <div class="param-row">
-                <span class="param-label-chat" title="Количество токенов (≈ слов) на выходе">Слов:</span>
-                <input type="range" class="mini" id="p-words" min="3" max="5000" value="60">
-                <input type="number" id="n-words" class="param-num-inp" min="3" max="5000" value="60">
-              </div>
-              <div class="param-row">
-                <span class="param-label-chat" title="Температура: 0.5=точный, 1.0=норм, 1.5+=хаос">Темп.:</span>
-                <input type="range" class="mini" id="p-temp" min="0.1" max="2.0" step="0.1" value="1.0">
-                <input type="number" id="n-temp" class="param-num-inp" min="0.1" max="2.0" step="0.1" value="1.0">
-              </div>
-            </div>
-            <div>
-              <div class="param-row">
-                <span class="param-label-chat" title="Top-K: берём K наиболее вероятных следующих слов">Top-K:</span>
-                <input type="range" class="mini" id="p-topk" min="1" max="200" value="50">
-                <input type="number" id="n-topk" class="param-num-inp" min="1" max="200" value="50">
-              </div>
-              <div class="param-row">
-                <span class="param-label-chat" title="Top-P Nucleus: набираем пока сумма вероятностей < P">Top-P:</span>
-                <input type="range" class="mini" id="p-topp" min="0.1" max="1.0" step="0.05" value="0.92">
-                <input type="number" id="n-topp" class="param-num-inp" min="0.1" max="1.0" step="0.05" value="0.92">
-              </div>
-              <div class="param-row">
-                <span class="param-label-chat" title="Штраф за повторения: 1.0=нет, 1.3=умеренный, 2.0=максимальный">Pen.:</span>
-                <input type="range" class="mini" id="p-pen" min="1.0" max="2.0" step="0.1" value="1.3">
-                <input type="number" id="n-pen" class="param-num-inp" min="1.0" max="2.0" step="0.1" value="1.3">
-              </div>
-            </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-empty" id="chat-empty">
+            <div class="chat-empty-icon">💬</div>
+            <h3>Выбери чат или создай новый</h3>
+            <button class="btn btn-primary" onclick="newChat()">＋ Новый чат</button>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-xs" onclick="setPreset(0.6,20,0.8,1.3)">Точный</button>
-            <button class="btn btn-ghost btn-xs" onclick="setPreset(1.0,50,0.92,1.3)">Норм</button>
-            <button class="btn btn-ghost btn-xs" onclick="setPreset(1.5,100,0.98,1.2)">Хаос</button>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"
-                title="Deep Processing: пошаговое уточнение каждого слова. Мин. 100 слов.">
-                <input type="checkbox" id="dpa-toggle" style="width:14px;height:14px;accent-color:var(--accent)" onchange="onDpaToggle()">
-                <span style="color:var(--accent);font-weight:700">DPA</span>
-                <span style="font-size:10px;color:var(--muted2)">(100+ слов)</span>
-              </label>
+        </div>
+
+        <div id="chat-input-area" style="display:none">
+          <div class="chat-input-wrap">
+            <!-- Family / Model picker -->
+            <div class="model-picker">
+              <div>
+                <label>🏷 Семейство (Family)</label>
+                <select class="picker-select" id="sel-family" onchange="onFamilyChange()">
+                  <option value="">— выбери семейство —</option>
+                </select>
+              </div>
+              <div>
+                <label>🧠 Модель (эпоха)</label>
+                <select class="picker-select" id="sel-model" onchange="onModelChange()">
+                  <option value="">— выбери модель —</option>
+                </select>
+              </div>
             </div>
-          </div>
-          <div class="chat-input-row">
-            <textarea class="chat-textarea" id="chat-input" rows="1"
-              placeholder="Введи начало текста (seed)…"
-              onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-            <button class="chat-send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+            <div class="model-info-bar" id="model-info-bar" style="display:none">
+              <span id="model-info-text">—</span>
+            </div>
+
+            <!-- Параметры -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin:10px 0 8px">
+              <div>
+                <div class="param-row">
+                  <span class="param-label-chat" title="Количество токенов (≈ слов) на выходе">Слов:</span>
+                  <input type="range" class="mini" id="p-words" min="3" max="5000" value="60">
+                  <input type="number" id="n-words" class="param-num-inp" min="3" max="5000" value="60">
+                </div>
+                <div class="param-row">
+                  <span class="param-label-chat" title="Температура: 0.5=точный, 1.0=норм, 1.5+=хаос">Темп.:</span>
+                  <input type="range" class="mini" id="p-temp" min="0.1" max="2.0" step="0.1" value="1.0">
+                  <input type="number" id="n-temp" class="param-num-inp" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+              </div>
+              <div>
+                <div class="param-row">
+                  <span class="param-label-chat" title="Top-K: берём K наиболее вероятных следующих слов">Top-K:</span>
+                  <input type="range" class="mini" id="p-topk" min="1" max="200" value="50">
+                  <input type="number" id="n-topk" class="param-num-inp" min="1" max="200" value="50">
+                </div>
+                <div class="param-row">
+                  <span class="param-label-chat"
+                    title="Top-P Nucleus: набираем пока сумма вероятностей < P">Top-P:</span>
+                  <input type="range" class="mini" id="p-topp" min="0.1" max="1.0" step="0.05" value="0.92">
+                  <input type="number" id="n-topp" class="param-num-inp" min="0.1" max="1.0" step="0.05" value="0.92">
+                </div>
+                <div class="param-row">
+                  <span class="param-label-chat"
+                    title="Штраф за повторения: 1.0=нет, 1.3=умеренный, 2.0=максимальный">Pen.:</span>
+                  <input type="range" class="mini" id="p-pen" min="1.0" max="2.0" step="0.1" value="1.3">
+                  <input type="number" id="n-pen" class="param-num-inp" min="1.0" max="2.0" step="0.1" value="1.3">
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost btn-xs" onclick="setPreset(0.6,20,0.8,1.3)">Точный</button>
+              <button class="btn btn-ghost btn-xs" onclick="setPreset(1.0,50,0.92,1.3)">Норм</button>
+              <button class="btn btn-ghost btn-xs" onclick="setPreset(1.5,100,0.98,1.2)">Хаос</button>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"
+                  title="Deep Processing: пошаговое уточнение каждого слова. Мин. 100 слов.">
+                  <input type="checkbox" id="dpa-toggle" style="width:14px;height:14px;accent-color:var(--accent)"
+                    onchange="onDpaToggle()">
+                  <span style="color:var(--accent);font-weight:700">DPA</span>
+                  <span style="font-size:10px;color:var(--muted2)">(100+ слов)</span>
+                </label>
+              </div>
+            </div>
+            <div class="chat-input-row">
+              <textarea class="chat-textarea" id="chat-input" rows="1" placeholder="Введи начало текста (seed)…"
+                onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+              <button class="chat-send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<div id="word-popup" class="word-popup hidden" style="display:none"></div>
+  <div id="word-popup" class="word-popup hidden" style="display:none"></div>
 
-<!-- Modal: правки -->
-<div class="overlay hidden" id="modal-corrections" onclick="closeOverlay(event,'modal-corrections')">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">📝 Словарь правок</span><button class="modal-close" onclick="closeModal('modal-corrections')">×</button></div>
-    <div class="modal-body">
-      <div id="corrections-list" class="corrections-list"></div>
-      <div class="separator"></div>
-      <div class="form-row">
-        <div class="form-group"><div class="form-label">Неверное</div><input class="inp" id="corr-wrong" type="text"></div>
-        <div class="form-group"><div class="form-label">Правильное</div><input class="inp" id="corr-correct" type="text"></div>
+  <!-- Modal: правки -->
+  <div class="overlay hidden" id="modal-corrections" onclick="closeOverlay(event,'modal-corrections')">
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">📝 Словарь правок</span><button class="modal-close"
+          onclick="closeModal('modal-corrections')">×</button></div>
+      <div class="modal-body">
+        <div id="corrections-list" class="corrections-list"></div>
+        <div class="separator"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <div class="form-label">Неверное</div><input class="inp" id="corr-wrong" type="text">
+          </div>
+          <div class="form-group">
+            <div class="form-label">Правильное</div><input class="inp" id="corr-correct" type="text">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-corrections')">Закрыть</button>
+        <button class="btn btn-primary" onclick="addCorrectionManual()">Добавить</button>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-corrections')">Закрыть</button>
-      <button class="btn btn-primary" onclick="addCorrectionManual()">Добавить</button>
-    </div>
   </div>
-</div>
 
-<!-- Modal: датасеты -->
-<div class="overlay hidden" id="modal-datasets" onclick="closeOverlay(event,'modal-datasets')">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">📂 Датасеты</span><button class="modal-close" onclick="closeModal('modal-datasets')">×</button></div>
-    <div class="modal-body">
-      <div class="file-upload-area" id="drop-zone" onclick="$('file-input').click()"
-        ondragover="event.preventDefault();this.classList.add('drag')"
-        ondragleave="this.classList.remove('drag')"
-        ondrop="handleFileDrop(event)">
-        📄 Перетащи .txt или нажми
-        <input type="file" id="file-input" accept=".txt" style="display:none" onchange="handleFileSelect(event)">
+  <!-- Modal: датасеты -->
+  <div class="overlay hidden" id="modal-datasets" onclick="closeOverlay(event,'modal-datasets')">
+    <div class="modal">
+      <div class="modal-header"><span class="modal-title">📂 Датасеты</span><button class="modal-close"
+          onclick="closeModal('modal-datasets')">×</button></div>
+      <div class="modal-body">
+        <div class="file-upload-area" id="drop-zone" onclick="$('file-input').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')"
+          ondrop="handleFileDrop(event)">
+          📄 Перетащи .txt или нажми
+          <input type="file" id="file-input" accept=".txt" style="display:none" onchange="handleFileSelect(event)">
+        </div>
+        <div id="upload-status" style="font-size:12px;color:var(--green);min-height:18px;margin-top:6px"></div>
+        <div style="margin-top:12px;font-weight:600;font-size:13px;margin-bottom:8px">Загружены</div>
+        <div id="datasets-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto">
+        </div>
       </div>
-      <div id="upload-status" style="font-size:12px;color:var(--green);min-height:18px;margin-top:6px"></div>
-      <div style="margin-top:12px;font-weight:600;font-size:13px;margin-bottom:8px">Загружены</div>
-      <div id="datasets-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
-    </div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-datasets')">Закрыть</button></div>
-  </div>
-</div>
-
-<!-- Modal: переименование -->
-<div class="overlay hidden" id="modal-rename" onclick="closeOverlay(event,'modal-rename')">
-  <div class="modal modal-sm">
-    <div class="modal-header"><span class="modal-title">✏️ Переименовать</span><button class="modal-close" onclick="closeModal('modal-rename')">×</button></div>
-    <div class="modal-body"><div class="form-group"><div class="form-label">Название</div><input class="inp" id="rename-input" type="text"></div></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-rename')">Отмена</button>
-      <button class="btn btn-primary" onclick="submitRename()">Сохранить</button>
+      <div class="modal-footer"><button class="btn" onclick="closeModal('modal-datasets')">Закрыть</button></div>
     </div>
   </div>
-</div>
 
-<script src="/js/utils.js"></script>
-<script>
-let _currentChatId=null, _chats=[], _generating=false;
-let _families=[], _selectedVersionId=null, _selectedEpoch=null, _selectedCkptPath=null;
+  <!-- Modal: переименование -->
+  <div class="overlay hidden" id="modal-rename" onclick="closeOverlay(event,'modal-rename')">
+    <div class="modal modal-sm">
+      <div class="modal-header"><span class="modal-title">✏️ Переименовать</span><button class="modal-close"
+          onclick="closeModal('modal-rename')">×</button></div>
+      <div class="modal-body">
+        <div class="form-group">
+          <div class="form-label">Название</div><input class="inp" id="rename-input" type="text">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-rename')">Отмена</button>
+        <button class="btn btn-primary" onclick="submitRename()">Сохранить</button>
+      </div>
+    </div>
+  </div>
 
-// ── Auth ──
-function switchTab(t){const isL=t==='login';$('tab-login').classList.toggle('active',isL);$('tab-reg').classList.toggle('active',!isL);toggle('form-login',isL);toggle('form-reg',!isL);tx('auth-err','');}
-async function doLogin(){const u=$('l-username')?.value.trim(),p=$('l-password')?.value;if(!u||!p){tx('auth-err','Заполни все поля');return;}const r=await apiPost('/api/auth/login',{username:u,password:p});if(!r.ok){tx('auth-err',r.error||'Ошибка');return;}await initApp();}
-async function doRegister(){const u=$('r-username')?.value.trim(),p=$('r-password')?.value;if(!u||!p){tx('auth-err','Заполни все поля');return;}const r=await apiPost('/api/auth/register',{username:u,password:p});if(!r.ok){tx('auth-err',r.error||'Ошибка');return;}await initApp();}
-async function doLogout(){await apiPost('/api/auth/logout');_me=null;$('app-screen').style.display='none';$('auth-screen').classList.remove('hidden');}
+  <script src="/js/utils.js"></script>
+  <script>
+    let _currentChatId = null, _chats = [], _generating = false;
+    let _families = [], _selectedVersionId = null, _selectedEpoch = null, _selectedCkptPath = null;
 
-async function initApp(){
-  _me=await apiGet('/api/auth/me');
-  if(!_me.auth){hide('app-screen');$('auth-screen').classList.remove('hidden');return;}
-  $('auth-screen').classList.add('hidden');$('app-screen').style.display='flex';
-  tx('nav-username',_me.username);
-  if(_me.role==='admin')document.querySelectorAll('.admin-only').forEach(el=>el.classList.remove('hidden'));
-  bindAllParams();
-  await loadFamiliesForChat();
-  await loadChats();
-}
+    // ── Auth ──
+    function switchTab(t) { const isL = t === 'login'; $('tab-login').classList.toggle('active', isL); $('tab-reg').classList.toggle('active', !isL); toggle('form-login', isL); toggle('form-reg', !isL); tx('auth-err', ''); }
+    async function doLogin() { const u = $('l-username')?.value.trim(), p = $('l-password')?.value; if (!u || !p) { tx('auth-err', 'Заполни все поля'); return; } const r = await apiPost('/api/auth/login', { username: u, password: p }); if (!r.ok) { tx('auth-err', r.error || 'Ошибка'); return; } await initApp(); }
+    async function doRegister() { const u = $('r-username')?.value.trim(), p = $('r-password')?.value; if (!u || !p) { tx('auth-err', 'Заполни все поля'); return; } const r = await apiPost('/api/auth/register', { username: u, password: p }); if (!r.ok) { tx('auth-err', r.error || 'Ошибка'); return; } await initApp(); }
+    async function doLogout() { await apiPost('/api/auth/logout'); _me = null; $('app-screen').style.display = 'none'; $('auth-screen').classList.remove('hidden'); }
 
-// ── Family / Model picker ──
-async function loadFamiliesForChat(){
-  _families=await apiGet('/api/models/families');
-  const sel=$('sel-family');if(!sel)return;
-  sel.innerHTML='<option value="">— выбери семейство —</option>';
-  _families.forEach(f=>{
-    const opt=document.createElement('option');
-    opt.value=f.id;opt.textContent=f.name;
-    sel.appendChild(opt);
-  });
-}
-
-function onFamilyChange(){
-  const fid=parseInt($('sel-family')?.value||0);
-  const sel=$('sel-model');if(!sel)return;
-  sel.innerHTML='<option value="">— выбери модель —</option>';
-  const fam=_families.find(f=>f.id===fid);
-  if(!fam)return;
-
-  // Собираем все доступные для чата эпохи
-  for(const ver of fam.versions||[]){
-    const epochs=ver.chat_epochs||[];
-    if(!epochs.length)continue;
-    const grp=document.createElement('optgroup');
-    grp.label=`Версия v${ver.version_num}${ver.notes?' — '+ver.notes:''}`;
-    for(const ep of epochs){
-      const opt=document.createElement('option');
-      // Определяем тип
-      let label='', cls='';
-      if(ep.is_best){label=`★ Лучшая (эп.${ep.epoch})`;cls='epoch-opt-best';}
-      else if(ep.validated){label=`✓ ${ep.custom_name||'?'} (эп.${ep.epoch})`;cls='epoch-opt-validated';}
-      else{label=`● Эп.${ep.epoch} val=${ep.val_loss?.toFixed(3)||'?'}`;cls='epoch-opt-unval';}
-      opt.value=JSON.stringify({vid:ver.id,epoch:ep.epoch,ckpt_path:ep.ckpt_path||null});
-      opt.textContent=label;opt.className=cls;
-      grp.appendChild(opt);
+    async function initApp() {
+      _me = await apiGet('/api/auth/me');
+      if (!_me.auth) { hide('app-screen'); $('auth-screen').classList.remove('hidden'); return; }
+      $('auth-screen').classList.add('hidden'); $('app-screen').style.display = 'flex';
+      tx('nav-username', _me.username);
+      if (_me.role === 'admin') document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+      bindAllParams();
+      await loadFamiliesForChat();
+      await loadChats();
     }
-    sel.appendChild(grp);
-  }
-}
 
-function onModelChange(){
-  const raw=$('sel-model')?.value;
-  if(!raw){_selectedVersionId=null;_selectedEpoch=null;_selectedCkptPath=null;hide('model-info-bar');return;}
-  try{
-    const d=JSON.parse(raw);
-    _selectedVersionId=d.vid;_selectedEpoch=d.epoch;_selectedCkptPath=d.ckpt_path;
-    const fid=parseInt($('sel-family')?.value||0);
-    const fam=_families.find(f=>f.id===fid);
-    const ver=fam?.versions?.find(v=>v.id===d.vid);
-    const ep=ver?.chat_epochs?.find(e=>e.epoch===d.epoch);
-    const info=`${fam?.name||'?'} → v${ver?.version_num||'?'} → эпоха #${d.epoch}${ep?.custom_name?' ('+ep.custom_name+')':''}`;
-    tx('model-info-text',info);show('model-info-bar');
-  }catch(e){_selectedVersionId=null;}
-}
+    // ── Family / Model picker ──
+    async function loadFamiliesForChat() {
+      _families = await apiGet('/api/models/families');
+      const sel = $('sel-family'); if (!sel) return;
+      sel.innerHTML = '<option value="">— выбери семейство —</option>';
+      _families.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id; opt.textContent = f.name;
+        sel.appendChild(opt);
+      });
+    }
 
-// ── Params ──
-function bindAllParams(){
-  const b=(rid,nid,fmt)=>{const r=$(rid),n=$(nid);if(!r)return;r.addEventListener('input',()=>{if(n)n.value=fmt?fmt(r.value):r.value;});if(n)n.addEventListener('change',()=>{if(r)r.value=n.value;});};
-  b('p-words','n-words');b('p-temp','n-temp',v=>parseFloat(v).toFixed(1));
-  b('p-topk','n-topk');b('p-topp','n-topp',v=>parseFloat(v).toFixed(2));
-  b('p-pen','n-pen',v=>parseFloat(v).toFixed(1));
-}
-function setPreset(temp,topk,topp,pen){
-  const sv=(rid,nid,val,fmt)=>{const r=$(rid),n=$(nid);if(r)r.value=val;if(n)n.value=fmt?fmt(val):val;};
-  sv('p-temp','n-temp',temp,v=>parseFloat(v).toFixed(1));sv('p-topk','n-topk',topk);
-  sv('p-topp','n-topp',topp,v=>parseFloat(v).toFixed(2));sv('p-pen','n-pen',pen,v=>parseFloat(v).toFixed(1));
-}
-function onDpaToggle(){
-  const on=!!$('dpa-toggle')?.checked;
-  [['p-temp','n-temp',0.6,v=>parseFloat(v).toFixed(1)],
-   ['p-topk','n-topk',20,null],
-   ['p-topp','n-topp',0.8,v=>parseFloat(v).toFixed(2)],
-   ['p-pen','n-pen',2.0,v=>parseFloat(v).toFixed(1)]].forEach(([r,n,val,fmt])=>{
-    const re=$(r),ne=$(n);
-    if(re){re.disabled=on;if(on)re.value=val;}
-    if(ne){ne.disabled=on;if(on)ne.value=fmt?fmt(val):val;}
-  });
-  if(on){const w=$('p-words'),wn=$('n-words');if(parseInt(w?.value||60)<100){if(w)w.value=100;if(wn)wn.value=100;}}
-}
+    function onFamilyChange() {
+      const fid = parseInt($('sel-family')?.value || 0);
+      const sel = $('sel-model'); if (!sel) return;
+      sel.innerHTML = '<option value="">— выбери модель —</option>';
+      const fam = _families.find(f => f.id === fid);
+      if (!fam) return;
 
-// ── Chats ──
-async function loadChats(){_chats=await apiGet('/api/chats');renderChatList();if(_chats.length&&!_currentChatId)await openChat(_chats[0].id);}
-function renderChatList(){
-  const list=$('chat-list');if(!list)return;
-  if(!_chats.length){list.innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Нет чатов</div>';return;}
-  list.innerHTML=_chats.map(c=>`
-    <div class="chat-item${c.id===_currentChatId?' active':''}" onclick="openChat(${c.id})">
+      // Собираем все доступные для чата эпохи
+      for (const ver of fam.versions || []) {
+        const epochs = ver.chat_epochs || [];
+        if (!epochs.length) continue;
+        const grp = document.createElement('optgroup');
+        grp.label = `Версия v${ver.version_num}${ver.notes ? ' — ' + ver.notes : ''}`;
+        for (const ep of epochs) {
+          const opt = document.createElement('option');
+          // Определяем тип
+          let label = '', cls = '';
+          if (ep.is_best) { label = `★ Лучшая (эп.${ep.epoch})`; cls = 'epoch-opt-best'; }
+          else if (ep.validated) { label = `✓ ${ep.custom_name || '?'} (эп.${ep.epoch})`; cls = 'epoch-opt-validated'; }
+          else { label = `● Эп.${ep.epoch} val=${ep.val_loss?.toFixed(3) || '?'}`; cls = 'epoch-opt-unval'; }
+          opt.value = JSON.stringify({ vid: ver.id, epoch: ep.epoch, ckpt_path: ep.ckpt_path || null });
+          opt.textContent = label; opt.className = cls;
+          grp.appendChild(opt);
+        }
+        sel.appendChild(grp);
+      }
+    }
+
+    function onModelChange() {
+      const raw = $('sel-model')?.value;
+      if (!raw) { _selectedVersionId = null; _selectedEpoch = null; _selectedCkptPath = null; hide('model-info-bar'); return; }
+      try {
+        const d = JSON.parse(raw);
+        _selectedVersionId = d.vid; _selectedEpoch = d.epoch; _selectedCkptPath = d.ckpt_path;
+        const fid = parseInt($('sel-family')?.value || 0);
+        const fam = _families.find(f => f.id === fid);
+        const ver = fam?.versions?.find(v => v.id === d.vid);
+        const ep = ver?.chat_epochs?.find(e => e.epoch === d.epoch);
+        const info = `${fam?.name || '?'} → v${ver?.version_num || '?'} → эпоха #${d.epoch}${ep?.custom_name ? ' (' + ep.custom_name + ')' : ''}`;
+        tx('model-info-text', info); show('model-info-bar');
+      } catch (e) { _selectedVersionId = null; }
+    }
+
+    // ── Params ──
+    function bindAllParams() {
+      const b = (rid, nid, fmt) => { const r = $(rid), n = $(nid); if (!r) return; r.addEventListener('input', () => { if (n) n.value = fmt ? fmt(r.value) : r.value; }); if (n) n.addEventListener('change', () => { if (r) r.value = n.value; }); };
+      b('p-words', 'n-words'); b('p-temp', 'n-temp', v => parseFloat(v).toFixed(1));
+      b('p-topk', 'n-topk'); b('p-topp', 'n-topp', v => parseFloat(v).toFixed(2));
+      b('p-pen', 'n-pen', v => parseFloat(v).toFixed(1));
+    }
+    function setPreset(temp, topk, topp, pen) {
+      const sv = (rid, nid, val, fmt) => { const r = $(rid), n = $(nid); if (r) r.value = val; if (n) n.value = fmt ? fmt(val) : val; };
+      sv('p-temp', 'n-temp', temp, v => parseFloat(v).toFixed(1)); sv('p-topk', 'n-topk', topk);
+      sv('p-topp', 'n-topp', topp, v => parseFloat(v).toFixed(2)); sv('p-pen', 'n-pen', pen, v => parseFloat(v).toFixed(1));
+    }
+    function onDpaToggle() {
+      const on = !!$('dpa-toggle')?.checked;
+      [['p-temp', 'n-temp', 0.6, v => parseFloat(v).toFixed(1)],
+      ['p-topk', 'n-topk', 20, null],
+      ['p-topp', 'n-topp', 0.8, v => parseFloat(v).toFixed(2)],
+      ['p-pen', 'n-pen', 2.0, v => parseFloat(v).toFixed(1)]].forEach(([r, n, val, fmt]) => {
+        const re = $(r), ne = $(n);
+        if (re) { re.disabled = on; if (on) re.value = val; }
+        if (ne) { ne.disabled = on; if (on) ne.value = fmt ? fmt(val) : val; }
+      });
+      if (on) { const w = $('p-words'), wn = $('n-words'); if (parseInt(w?.value || 60) < 100) { if (w) w.value = 100; if (wn) wn.value = 100; } }
+    }
+
+    // ── Chats ──
+    async function loadChats() { _chats = await apiGet('/api/chats'); renderChatList(); if (_chats.length && !_currentChatId) await openChat(_chats[0].id); }
+    function renderChatList() {
+      const list = $('chat-list'); if (!list) return;
+      if (!_chats.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Нет чатов</div>'; return; }
+      list.innerHTML = _chats.map(c => `
+    <div class="chat-item${c.id === _currentChatId ? ' active' : ''}" onclick="openChat(${c.id})">
       <span>💬</span>
       <div style="flex:1;overflow:hidden"><div class="chat-item-title">${escapeHtml(c.title)}</div></div>
       <button class="chat-item-del" onclick="event.stopPropagation();confirmDeleteChat(${c.id})">✕</button>
     </div>`).join('');
-}
-async function newChat(){const r=await apiPost('/api/chats',{title:'Новый чат'});_chats.unshift({id:r.id,title:r.title});renderChatList();await openChat(r.id);}
-async function openChat(id){_currentChatId=id;const chat=_chats.find(c=>c.id===id);if(chat)tx('chat-title',chat.title);show('chat-header');$('chat-input-area').style.display='block';renderChatList();await loadMessages(id);}
-async function loadMessages(chatId){
-  const msgs=await apiGet(`/api/chats/${chatId}/messages`);
-  const box=$('chat-messages');if(!box)return;
-  if(!msgs.length){box.innerHTML=`<div class="chat-empty" style="margin:auto"><div style="font-size:32px;opacity:.3">✨</div><p style="color:var(--muted2);font-size:13px">Введи seed ниже и нажми ➤</p></div>`;return;}
-  box.innerHTML='';msgs.forEach(m=>appendMessageEl(m.role,m.content,m.id,m.ts));box.scrollTop=box.scrollHeight;
-}
+    }
+    async function newChat() { const r = await apiPost('/api/chats', { title: 'Новый чат' }); _chats.unshift({ id: r.id, title: r.title }); renderChatList(); await openChat(r.id); }
+    async function openChat(id) { _currentChatId = id; const chat = _chats.find(c => c.id === id); if (chat) tx('chat-title', chat.title); show('chat-header'); $('chat-input-area').style.display = 'block'; renderChatList(); await loadMessages(id); }
+    async function loadMessages(chatId) {
+      const msgs = await apiGet(`/api/chats/${chatId}/messages`);
+      const box = $('chat-messages'); if (!box) return;
+      if (!msgs.length) { box.innerHTML = `<div class="chat-empty" style="margin:auto"><div style="font-size:32px;opacity:.3">✨</div><p style="color:var(--muted2);font-size:13px">Введи seed ниже и нажми ➤</p></div>`; return; }
+      box.innerHTML = ''; msgs.forEach(m => appendMessageEl(m.role, m.content, m.id, m.ts)); box.scrollTop = box.scrollHeight;
+    }
 
-function renderWords(text,msgId){
-  const parts=text.match(/[а-яёА-ЯЁa-zA-Z0-9]+|[^\wа-яёА-ЯЁ\s]|\s+/g)||[text];
-  return parts.map(p=>{
-    if(/\s+/.test(p))return p;
-    if(/^[а-яёА-ЯЁa-zA-Z]/.test(p))return`<span class="word-span" data-word="${escapeHtml(p)}" data-msg="${msgId}" onclick="onWordClick(event,this)">${escapeHtml(p)}</span>`;
-    return`<span class="word-span punct">${escapeHtml(p)}</span>`;
-  }).join('');
-}
-function appendMessageEl(role,content,id,ts){
-  const box=$('chat-messages');if(!box)return;
-  const empty=box.querySelector('.chat-empty');if(empty)empty.remove();
-  const div=document.createElement('div');div.className=`msg msg-${role}`;div.id=`msg-${id}`;
-  const bubble=role==='bot'?`<div class="msg-bubble">${renderWords(content,id)}</div>`:`<div class="msg-bubble">${escapeHtml(content)}</div>`;
-  div.innerHTML=`${bubble}<div class="msg-actions"><span style="font-size:11px;color:var(--muted)">${ts?fmtTs(ts):''}</span><button class="msg-copy-btn" onclick="copyMsg(${id})">📋 Копировать</button></div>`;
-  box.appendChild(div);box.scrollTop=box.scrollHeight;
-}
-function copyMsg(id){const el=document.getElementById(`msg-${id}`);if(!el)return;navigator.clipboard.writeText(el.querySelector('.msg-bubble')?.innerText||'').then(()=>showToast('Скопировано!'));}
+    function renderWords(text, msgId) {
+      const parts = text.match(/[а-яёА-ЯЁa-zA-Z0-9]+|[^\wа-яёА-ЯЁ\s]|\s+/g) || [text];
+      return parts.map(p => {
+        if (/\s+/.test(p)) return p;
+        if (/^[а-яёА-ЯЁa-zA-Z]/.test(p)) return `<span class="word-span" data-word="${escapeHtml(p)}" data-msg="${msgId}" onclick="onWordClick(event,this)">${escapeHtml(p)}</span>`;
+        return `<span class="word-span punct">${escapeHtml(p)}</span>`;
+      }).join('');
+    }
+    function appendMessageEl(role, content, id, ts) {
+      const box = $('chat-messages'); if (!box) return;
+      const empty = box.querySelector('.chat-empty'); if (empty) empty.remove();
+      const div = document.createElement('div'); div.className = `msg msg-${role}`; div.id = `msg-${id}`;
+      const bubble = role === 'bot' ? `<div class="msg-bubble">${renderWords(content, id)}</div>` : `<div class="msg-bubble">${escapeHtml(content)}</div>`;
+      div.innerHTML = `${bubble}<div class="msg-actions"><span style="font-size:11px;color:var(--muted)">${ts ? fmtTs(ts) : ''}</span><button class="msg-copy-btn" onclick="copyMsg(${id})">📋 Копировать</button></div>`;
+      box.appendChild(div); box.scrollTop = box.scrollHeight;
+    }
+    function copyMsg(id) { const el = document.getElementById(`msg-${id}`); if (!el) return; navigator.clipboard.writeText(el.querySelector('.msg-bubble')?.innerText || '').then(() => showToast('Скопировано!')); }
 
-// ── Word click ──
-function onWordClick(event,span){
-  event.stopPropagation();
-  const word=span.getAttribute('data-word'),msgId=span.getAttribute('data-msg');
-  const popup=$('word-popup');
-  popup.innerHTML=`<div class="word-popup-title">Слово: <b style="color:var(--accent)">${escapeHtml(word)}</b></div>
+    // ── Word click ──
+    function onWordClick(event, span) {
+      event.stopPropagation();
+      const word = span.getAttribute('data-word'), msgId = span.getAttribute('data-msg');
+      const popup = $('word-popup');
+      popup.innerHTML = `<div class="word-popup-title">Слово: <b style="color:var(--accent)">${escapeHtml(word)}</b></div>
     <div class="word-alt custom-input"><input type="text" id="pop-custom" placeholder="Замена…" onkeydown="if(event.key==='Enter')applyCustomWord('${escapeHtml(word)}','${msgId}')"><button onclick="applyCustomWord('${escapeHtml(word)}','${msgId}')">✓</button></div>
     <div class="word-alt gen-btn" onclick="generateAlts('${escapeHtml(word)}','${msgId}',this)">⟳ Варианты от модели…</div>`;
-  popup.style.display='block';popup.classList.remove('hidden');
-  const rect=span.getBoundingClientRect();
-  let left=rect.left,top=rect.bottom+6;
-  if(left+200>window.innerWidth)left=window.innerWidth-208;
-  if(top+160>window.innerHeight)top=rect.top-166;
-  popup.style.left=left+'px';popup.style.top=top+'px';
-  setTimeout(()=>$('pop-custom')?.focus(),50);
-}
-async function generateAlts(word,msgId,btn){
-  btn.textContent='⏳...';
-  const bubble=document.querySelector(`#msg-${msgId} .msg-bubble`);let ctx='';
-  if(bubble){const spans=bubble.querySelectorAll('.word-span');let ws=[];for(const s of spans){if(s===document.querySelector(`[data-word="${word}"][data-msg="${msgId}"]`))break;if(!s.classList.contains('punct'))ws.push(s.textContent);}ctx=ws.slice(-15).join(' ');}
-  const r=await apiPost('/api/word/alternatives',{word,context:ctx,n:5});
-  if(r.error){btn.textContent='❌';return;}
-  const popup=$('word-popup');
-  popup.querySelector('.word-alt.gen-btn')?.remove();
-  const frag=document.createDocumentFragment();
-  r.alternatives.forEach(a=>{const d=document.createElement('div');d.className='word-alt';d.textContent=a;d.onclick=()=>applyWordAlt(word,a,msgId);frag.appendChild(d);});
-  const newGenBtn=document.createElement('div');newGenBtn.className='word-alt gen-btn';newGenBtn.textContent='⟳ Ещё…';newGenBtn.onclick=()=>generateAlts(word,msgId,newGenBtn);frag.appendChild(newGenBtn);
-  popup.appendChild(frag);
-}
-function applyCustomWord(orig,msgId){const val=$('pop-custom')?.value.trim();if(!val)return;applyWordAlt(orig,val,msgId);}
-async function applyWordAlt(orig,repl,msgId){
-  closeWordPopup();
-  document.querySelectorAll(`[data-word="${orig}"][data-msg="${msgId}"]`).forEach(s=>{s.setAttribute('data-word',repl);s.textContent=repl;});
-  const bubble=document.querySelector(`#msg-${msgId} .msg-bubble`);
-  await apiPost('/api/corrections',{wrong:orig,correct:repl,context:(bubble?bubble.innerText:'').slice(0,100),msg_id:parseInt(msgId)||null});
-  showToast(`"${orig}" → "${repl}"`);
-}
-function closeWordPopup(){const p=$('word-popup');if(p){p.style.display='none';p.classList.add('hidden');}}
-document.addEventListener('click',()=>closeWordPopup());
-
-// ── Generate ──
-async function sendMessage(){
-  if(_generating||!_currentChatId)return;
-  const inp=$('chat-input');const seed=inp?.value.trim()||'';inp.value='';autoResize(inp);
-  const dpa=!!$('dpa-toggle')?.checked;
-  const numWords=parseInt($('p-words')?.value||60);
-  if(dpa&&numWords<100){showToast('DPA требует минимум 100 слов');return;}
-  const params={seed,num_words:numWords,
-    temperature:parseFloat($('n-temp')?.value||1.0),
-    top_k:parseInt($('n-topk')?.value||50),
-    top_p:parseFloat($('n-topp')?.value||0.92),
-    deep_process:dpa,
-    repetition_penalty:parseFloat($('n-pen')?.value||1.3),
-    no_repeat_ngram:3,
-  };
-  // Передаём путь к выбранной эпохе
-  if(_selectedVersionId&&_selectedEpoch){
-    const r=await apiGet(`/api/models/versions/${_selectedVersionId}/epochs/${_selectedEpoch}/ckpt_path`).catch(()=>null);
-    if(r?.path)params.checkpoint_path=r.path;
-  }
-  if(seed)appendMessageEl('user',seed,'u'+Date.now(),Math.floor(Date.now()/1000));
-  _generating=true;const btn=$('send-btn');if(btn)btn.disabled=true;
-  const typId='typ'+Date.now();const box=$('chat-messages');
-  if(box){const d=document.createElement('div');d.id=typId;d.className='msg msg-bot';d.innerHTML='<div class="msg-bubble"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';const em=box.querySelector('.chat-empty');if(em)em.remove();box.appendChild(d);box.scrollTop=box.scrollHeight;}
-  try{
-    const r=await apiPost(`/api/chats/${_currentChatId}/generate`,params);
-    document.getElementById(typId)?.remove();
-    if(r.error)appendMessageEl('bot','❌ '+r.error,'e'+Date.now(),Math.floor(Date.now()/1000));
-    else{
-      appendMessageEl('bot',r.text,r.msg_id,Math.floor(Date.now()/1000));
-      const chat=_chats.find(c=>c.id===_currentChatId);
-      if(chat&&chat.title==='Новый чат'&&seed){const t=seed.slice(0,30)+(seed.length>30?'…':'');await apiPost(`/api/chats/${_currentChatId}/rename`,{title:t});chat.title=t;tx('chat-title',t);renderChatList();}
+      popup.style.display = 'block'; popup.classList.remove('hidden');
+      const rect = span.getBoundingClientRect();
+      let left = rect.left, top = rect.bottom + 6;
+      if (left + 200 > window.innerWidth) left = window.innerWidth - 208;
+      if (top + 160 > window.innerHeight) top = rect.top - 166;
+      popup.style.left = left + 'px'; popup.style.top = top + 'px';
+      setTimeout(() => $('pop-custom')?.focus(), 50);
     }
-  }catch(e){document.getElementById(typId)?.remove();appendMessageEl('bot','❌ '+e.message,'e'+Date.now(),Math.floor(Date.now()/1000));}
-  finally{_generating=false;if(btn)btn.disabled=false;}
-}
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+    async function generateAlts(word, msgId, btn) {
+      btn.textContent = '⏳...';
+      const bubble = document.querySelector(`#msg-${msgId} .msg-bubble`); let ctx = '';
+      if (bubble) { const spans = bubble.querySelectorAll('.word-span'); let ws = []; for (const s of spans) { if (s === document.querySelector(`[data-word="${word}"][data-msg="${msgId}"]`)) break; if (!s.classList.contains('punct')) ws.push(s.textContent); } ctx = ws.slice(-15).join(' '); }
+      const r = await apiPost('/api/word/alternatives', { word, context: ctx, n: 5 });
+      if (r.error) { btn.textContent = '❌'; return; }
+      const popup = $('word-popup');
+      popup.querySelector('.word-alt.gen-btn')?.remove();
+      const frag = document.createDocumentFragment();
+      r.alternatives.forEach(a => { const d = document.createElement('div'); d.className = 'word-alt'; d.textContent = a; d.onclick = () => applyWordAlt(word, a, msgId); frag.appendChild(d); });
+      const newGenBtn = document.createElement('div'); newGenBtn.className = 'word-alt gen-btn'; newGenBtn.textContent = '⟳ Ещё…'; newGenBtn.onclick = () => generateAlts(word, msgId, newGenBtn); frag.appendChild(newGenBtn);
+      popup.appendChild(frag);
+    }
+    function applyCustomWord(orig, msgId) { const val = $('pop-custom')?.value.trim(); if (!val) return; applyWordAlt(orig, val, msgId); }
+    async function applyWordAlt(orig, repl, msgId) {
+      closeWordPopup();
+      document.querySelectorAll(`[data-word="${orig}"][data-msg="${msgId}"]`).forEach(s => { s.setAttribute('data-word', repl); s.textContent = repl; });
+      const bubble = document.querySelector(`#msg-${msgId} .msg-bubble`);
+      await apiPost('/api/corrections', { wrong: orig, correct: repl, context: (bubble ? bubble.innerText : '').slice(0, 100), msg_id: parseInt(msgId) || null });
+      showToast(`"${orig}" → "${repl}"`);
+    }
+    function closeWordPopup() { const p = $('word-popup'); if (p) { p.style.display = 'none'; p.classList.add('hidden'); } }
+    document.addEventListener('click', () => closeWordPopup());
 
-// ── Chat management ──
-async function confirmDeleteChat(id){if(!confirm('Удалить?'))return;await apiDel(`/api/chats/${id}`);_chats=_chats.filter(c=>c.id!==id);if(_currentChatId===id){_currentChatId=null;hide('chat-header');$('chat-input-area').style.display='none';$('chat-messages').innerHTML=`<div class="chat-empty"><div class="chat-empty-icon">💬</div><h3>Чат удалён</h3><button class="btn btn-primary" onclick="newChat()">＋ Новый</button></div>`;}renderChatList();}
-function deleteCurrentChat(){if(_currentChatId)confirmDeleteChat(_currentChatId);}
-function openRenameModal(){const c=_chats.find(c=>c.id===_currentChatId);if(!c)return;const i=$('rename-input');if(i)i.value=c.title;openModal('modal-rename');}
-async function submitRename(){const t=$('rename-input')?.value.trim();if(!t||!_currentChatId)return;await apiPost(`/api/chats/${_currentChatId}/rename`,{title:t});const c=_chats.find(c=>c.id===_currentChatId);if(c)c.title=t;tx('chat-title',t);renderChatList();closeModal('modal-rename');}
+    // ── Generate ──
+    async function sendMessage() {
+      if (_generating || !_currentChatId) return;
+      const inp = $('chat-input'); const seed = inp?.value.trim() || ''; inp.value = ''; autoResize(inp);
+      const dpa = !!$('dpa-toggle')?.checked;
+      const numWords = parseInt($('p-words')?.value || 60);
+      if (dpa && numWords < 100) { showToast('DPA требует минимум 100 слов'); return; }
+      const params = {
+        seed, num_words: numWords,
+        temperature: parseFloat($('n-temp')?.value || 1.0),
+        top_k: parseInt($('n-topk')?.value || 50),
+        top_p: parseFloat($('n-topp')?.value || 0.92),
+        deep_process: dpa,
+        repetition_penalty: parseFloat($('n-pen')?.value || 1.3),
+        no_repeat_ngram: 3,
+      };
+      // Передаём путь к выбранной эпохе
+      if (_selectedVersionId && _selectedEpoch) {
+        const r = await apiGet(`/api/models/versions/${_selectedVersionId}/epochs/${_selectedEpoch}/ckpt_path`).catch(() => null);
+        if (r?.path) params.checkpoint_path = r.path;
+      }
+      if (seed) appendMessageEl('user', seed, 'u' + Date.now(), Math.floor(Date.now() / 1000));
+      _generating = true; const btn = $('send-btn'); if (btn) btn.disabled = true;
+      const typId = 'typ' + Date.now(); const box = $('chat-messages');
+      if (box) { const d = document.createElement('div'); d.id = typId; d.className = 'msg msg-bot'; d.innerHTML = '<div class="msg-bubble"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>'; const em = box.querySelector('.chat-empty'); if (em) em.remove(); box.appendChild(d); box.scrollTop = box.scrollHeight; }
+      try {
+        const r = await apiPost(`/api/chats/${_currentChatId}/generate`, params);
+        document.getElementById(typId)?.remove();
+        if (r.error) appendMessageEl('bot', '❌ ' + r.error, 'e' + Date.now(), Math.floor(Date.now() / 1000));
+        else {
+          appendMessageEl('bot', r.text, r.msg_id, Math.floor(Date.now() / 1000));
+          const chat = _chats.find(c => c.id === _currentChatId);
+          if (chat && chat.title === 'Новый чат' && seed) { const t = seed.slice(0, 30) + (seed.length > 30 ? '…' : ''); await apiPost(`/api/chats/${_currentChatId}/rename`, { title: t }); chat.title = t; tx('chat-title', t); renderChatList(); }
+        }
+      } catch (e) { document.getElementById(typId)?.remove(); appendMessageEl('bot', '❌ ' + e.message, 'e' + Date.now(), Math.floor(Date.now() / 1000)); }
+      finally { _generating = false; if (btn) btn.disabled = false; }
+    }
+    function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ── Corrections / Datasets ──
-async function loadCorrections(){const list=await apiGet('/api/corrections');const el=$('corrections-list');if(!el)return;if(!list.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px;text-align:center;padding:20px">Правок нет</div>';return;}el.innerHTML=list.map(c=>`<div class="correction-item"><span class="corr-wrong">${escapeHtml(c.wrong)}</span><span class="corr-arrow">→</span><span class="corr-correct">${escapeHtml(c.correct)}</span></div>`).join('');}
-async function addCorrectionManual(){const w=$('corr-wrong')?.value.trim(),c=$('corr-correct')?.value.trim();if(!w||!c){alert('Заполни оба поля');return;}const r=await apiPost('/api/corrections',{wrong:w,correct:c});if(r.error){alert(r.error);return;}$('corr-wrong').value='';$('corr-correct').value='';await loadCorrections();showToast(`"${w}" → "${c}"`);}
-async function loadDatasets(){const ds=await apiGet('/api/datasets');const el=$('datasets-list');if(!el)return;if(!ds.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px;text-align:center;padding:12px">Нет датасетов</div>';return;}el.innerHTML=ds.map(d=>`<div class="dataset-item"><span>📄</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.filename)}</span><span style="font-size:11px;color:var(--muted2)">${fmtK(d.words)} сл.</span></div>`).join('');}
-async function handleFileSelect(e){await uploadFile(e.target.files[0]);}
-async function handleFileDrop(e){e.preventDefault();$('drop-zone').classList.remove('drag');await uploadFile(e.dataTransfer.files[0]);}
-async function uploadFile(file){if(!file)return;if(!file.name.endsWith('.txt')){showToast('Только .txt');return;}const st=$('upload-status');if(st)st.textContent='Загрузка...';const form=new FormData();form.append('file',file);const r=await fetch('/api/datasets/upload',{method:'POST',body:form});const data=await r.json();if(data.error){if(st)st.textContent='❌ '+data.error;return;}if(st)st.textContent=`✅ ${data.filename}: +${data.new_vocab_words} слов`;await loadDatasets();}
+    // ── Chat management ──
+    async function confirmDeleteChat(id) { if (!confirm('Удалить?')) return; await apiDel(`/api/chats/${id}`); _chats = _chats.filter(c => c.id !== id); if (_currentChatId === id) { _currentChatId = null; hide('chat-header'); $('chat-input-area').style.display = 'none'; $('chat-messages').innerHTML = `<div class="chat-empty"><div class="chat-empty-icon">💬</div><h3>Чат удалён</h3><button class="btn btn-primary" onclick="newChat()">＋ Новый</button></div>`; } renderChatList(); }
+    function deleteCurrentChat() { if (_currentChatId) confirmDeleteChat(_currentChatId); }
+    function openRenameModal() { const c = _chats.find(c => c.id === _currentChatId); if (!c) return; const i = $('rename-input'); if (i) i.value = c.title; openModal('modal-rename'); }
+    async function submitRename() { const t = $('rename-input')?.value.trim(); if (!t || !_currentChatId) return; await apiPost(`/api/chats/${_currentChatId}/rename`, { title: t }); const c = _chats.find(c => c.id === _currentChatId); if (c) c.title = t; tx('chat-title', t); renderChatList(); closeModal('modal-rename'); }
 
-const _origOpen=window.openModal;
-window.openModal=function(id){_origOpen(id);if(id==='modal-corrections')loadCorrections();if(id==='modal-datasets')loadDatasets();};
+    // ── Corrections / Datasets ──
+    async function loadCorrections() { const list = await apiGet('/api/corrections'); const el = $('corrections-list'); if (!el) return; if (!list.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:20px">Правок нет</div>'; return; } el.innerHTML = list.map(c => `<div class="correction-item"><span class="corr-wrong">${escapeHtml(c.wrong)}</span><span class="corr-arrow">→</span><span class="corr-correct">${escapeHtml(c.correct)}</span></div>`).join(''); }
+    async function addCorrectionManual() { const w = $('corr-wrong')?.value.trim(), c = $('corr-correct')?.value.trim(); if (!w || !c) { alert('Заполни оба поля'); return; } const r = await apiPost('/api/corrections', { wrong: w, correct: c }); if (r.error) { alert(r.error); return; } $('corr-wrong').value = ''; $('corr-correct').value = ''; await loadCorrections(); showToast(`"${w}" → "${c}"`); }
+    async function loadDatasets() { const ds = await apiGet('/api/datasets'); const el = $('datasets-list'); if (!el) return; if (!ds.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:12px">Нет датасетов</div>'; return; } el.innerHTML = ds.map(d => `<div class="dataset-item"><span>📄</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.filename)}</span><span style="font-size:11px;color:var(--muted2)">${fmtK(d.words)} сл.</span></div>`).join(''); }
+    async function handleFileSelect(e) { await uploadFile(e.target.files[0]); }
+    async function handleFileDrop(e) { e.preventDefault(); $('drop-zone').classList.remove('drag'); await uploadFile(e.dataTransfer.files[0]); }
+    async function uploadFile(file) { if (!file) return; if (!file.name.endsWith('.txt')) { showToast('Только .txt'); return; } const st = $('upload-status'); if (st) st.textContent = 'Загрузка...'; const form = new FormData(); form.append('file', file); const r = await fetch('/api/datasets/upload', { method: 'POST', body: form }); const data = await r.json(); if (data.error) { if (st) st.textContent = '❌ ' + data.error; return; } if (st) st.textContent = `✅ ${data.filename}: +${data.new_vocab_words} слов`; await loadDatasets(); }
 
-function showToast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--green);z-index:700;transition:opacity .3s;pointer-events:none';document.body.appendChild(t);}t.textContent=msg;t.style.opacity='1';clearTimeout(t._tid);t._tid=setTimeout(()=>{t.style.opacity='0';},2500);}
+    const _origOpen = window.openModal;
+    window.openModal = function (id) { _origOpen(id); if (id === 'modal-corrections') loadCorrections(); if (id === 'modal-datasets') loadDatasets(); };
 
-document.addEventListener('DOMContentLoaded',async()=>{await initApp();});
-</script>
+    function showToast(msg) { let t = document.getElementById('toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--green);z-index:700;transition:opacity .3s;pointer-events:none'; document.body.appendChild(t); } t.textContent = msg; t.style.opacity = '1'; clearTimeout(t._tid); t._tid = setTimeout(() => { t.style.opacity = '0'; }, 2500); }
+
+    document.addEventListener('DOMContentLoaded', async () => { await initApp(); });
+  </script>
 </body>
+
 </html>

@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexis Inspector</title>
+  <style>
+    /* ─── Design tokens (KipLet / front.zip mapped to dark theme) ─── */
+    :root {
+      /* Colors */
+      --bg-page: #0d1117;
+      --bg-elevated: #161b22;
+      --bg-sunken: #090d13;
+      --bg-paper-card: #1a2130;
+      --border-subtle: rgba(48, 64, 92, .55);
+      --border-strong: rgba(48, 64, 92, .9);
+      --border-paper: #263144;
+
+      --fg-primary: #e6edf3;
+      --fg-secondary: #8b949e;
+      --fg-muted: #484f58;
+
+      --brand-100: rgba(56, 139, 253, .12);
+      --brand-600: #388bfd;
+      --brand-700: #1f6feb;
+
+      --success-600: #3fb950;
+      --warning-600: #d29922;
+      --danger-600: #f85149;
+      --info-600: #58a6ff;
+      --ochre-100: rgba(210, 153, 34, .12);
+      --ochre-600: #d29922;
+
+      --ink-500: #6e7681;
+
+      /* Spacing */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+
+      /* Radii */
+      --radius-xs: 4px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-pill: 9999px;
+
+      /* Typography */
+      --font-ui: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --font-display: 'Segoe UI Semibold', 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+
+      --text-body-xs: 11px;
+      --text-body-sm: 13px;
+      --text-body-md: 14px;
+      --text-heading-sm: 15px;
+      --text-heading-md: 18px;
+      --text-heading-lg: 22px;
+
+      --tracking-tight: -0.02em;
+      --tracking-wider: 0.06em;
+      --lh-body-md: 1.55;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, .35);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, .45);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, .6);
+      --shadow-paper: 3px 3px 0 0 rgba(20, 24, 43, .85);
+
+      /* Motion */
+      --duration-fast: 120ms;
+      --duration-base: 200ms;
+      --duration-slow: 300ms;
+      --ease-standard: cubic-bezier(.2, 0, 0, 1);
+      --ease-emphasized: cubic-bezier(.05, .7, .1, 1);
+
+      /* Z-index */
+      --z-overlay: 200;
+      --z-modal: 201;
+      --z-toast: 300;
+
+      /* Agent colors */
+      --a1: #388bfd;
+      --a2: #3fb950;
+      --a3: #d29922;
+      --a4: #f85149;
+      --a5: #58a6ff;
+      --a6: #9a6cff;
+      --a7: #ff7b72;
+      --a8: #ffa657;
+      --a9: #79c0ff;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      background: var(--bg-page);
+      color: var(--fg-primary);
+      font-family: var(--font-ui);
+      font-size: var(--text-body-md);
+      line-height: var(--lh-body-md);
+      min-height: 100vh
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 3px
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-strong)
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    /* ─── Layout ─── */
+    .shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      overflow: hidden
+    }
+
+    /* ─── Top bar ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: 0 var(--space-6);
+      height: 52px;
+      background: var(--bg-elevated);
+      border-bottom: .5px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .topbar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-family: var(--font-display);
+      font-size: var(--text-heading-sm);
+      font-weight: 600;
+      letter-spacing: var(--tracking-tight);
+      color: var(--fg-primary);
+      text-decoration: none;
+    }
+
+    .topbar-logo-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--brand-600), var(--brand-700));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      font-size: var(--text-body-sm);
+      color: var(--fg-muted);
+      margin-left: var(--space-2);
+      padding-left: var(--space-3);
+      border-left: .5px solid var(--border-subtle);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-left: auto
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: 2px var(--space-2);
+      border-radius: var(--radius-pill);
+      font-size: var(--text-body-xs);
+      font-weight: 500;
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-success {
+      background: rgba(63, 185, 80, .12);
+      color: var(--success-600)
+    }
+
+    .badge-warning {
+      background: var(--ochre-100);
+      color: var(--ochre-600)
+    }
+
+    .badge-danger {
+      background: rgba(248, 81, 73, .12);
+      color: var(--danger-600)
+    }
+
+    .badge-brand {
+      background: var(--brand-100);
+      color: var(--brand-600)
+    }
+
+    .badge-neutral {
+      background: var(--bg-sunken);
+      color: var(--fg-secondary)
+    }
+
+    /* ─── Main content ─── */
+    .main {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      overflow: hidden
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      border-right: .5px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--bg-elevated);
+    }
+
+    .sidebar-section {
+      padding: var(--space-5) var(--space-4);
+      border-bottom: .5px solid var(--border-subtle)
+    }
+
+    .sidebar-section:last-child {
+      border-bottom: none;
+      flex: 1
+    }
+
+    .sidebar-label {
+      font-size: var(--text-body-xs);
+      font-weight: 600;
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      margin-bottom: var(--space-3);
+    }
+
+    /* ─── Storage picker ─── */
+    .storage-drop {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-6) var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--duration-fast), background var(--duration-fast);
+      color: var(--fg-muted);
+      font-size: var(--text-body-sm);
+    }
+
+    .storage-drop:hover,
+    .storage-drop.drag {
+      border-color: var(--brand-600);
+      background: var(--brand-100);
+      color: var(--brand-600);
+    }
+
+    .storage-drop-icon {
+      font-size: 28px;
+      margin-bottom: var(--space-2);
+      display: block
+    }
+
+    .storage-info {
+      background: var(--bg-paper-card);
+      border: 1px solid var(--border-paper);
+      border-radius: var(--radius-md);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-body-sm);
+    }
+
+    .storage-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 2px 0
+    }
+
+    .storage-info-key {
+      color: var(--fg-muted)
+    }
+
+    .storage-info-val {
+      color: var(--fg-primary);
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      text-align: right;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    /* ─── Params ─── */
+    .param-grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3)
+    }
+
+    .param-row {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1)
+    }
+
+    .param-label {
+      font-size: var(--text-body-xs);
+      color: var(--fg-secondary);
+      font-weight: 500
+    }
+
+    .param-control {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2)
+    }
+
+    input[type=range] {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--brand-600) var(--pct, 50%), var(--border-strong) var(--pct, 50%));
+      -webkit-appearance: none;
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: var(--radius-pill);
+      background: var(--brand-600);
+      cursor: pointer;
+      box-shadow: 0 0 0 3px var(--brand-100);
+    }
+
+    .param-val {
+      min-width: 44px;
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      color: var(--brand-600);
+      font-weight: 600;
+    }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-body-sm);
+      font-weight: 500;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-standard);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed
+    }
+
+    .btn-primary {
+      background: var(--brand-600);
+      color: #fff
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2f7de9;
+      box-shadow: var(--shadow-sm)
+    }
+
+    .btn-success {
+      background: var(--success-600);
+      color: #fff
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #359d44
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg-secondary);
+      border: 1px solid var(--border-strong)
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background: var(--bg-sunken);
+      color: var(--fg-primary)
+    }
+
+    .btn-danger {
+      background: rgba(248, 81, 73, .12);
+      color: var(--danger-600);
+      border: 1px solid rgba(248, 81, 73, .3)
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(248, 81, 73, .22)
+    }
+
+    .btn-icon {
+      padding: 6px;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0
+    }
+
+    .btn-sm {
+      padding: 4px var(--space-3);
+      font-size: var(--text-body-xs)
+    }
+
+    .btn-lg {
+      padding: var(--space-3) var(--space-5);
+      font-size: var(--text-body-md)
+    }
+
+    .btn-full {
+      width: 100%
+    }
+
+    /* ─── Input / Select / Textarea ─── */
+    .inp {
+      display: block;
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      background: var(--bg-page);
+      color: var(--fg-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-body-sm);
+      font-family: var(--font-ui);
+      transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    }
+
+    .inp::placeholder {
+      color: var(--fg-muted)
+    }
+
+    .inp:hover:not(:disabled) {
+      border-color: var(--ink-500)
+    }
+
+    .inp:focus {
+      outline: none;
+      border-color: var(--brand-600);
+      box-shadow: 0 0 0 3px var(--brand-100)
+    }
+
+    .inp:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    select.inp {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%236e7681' stroke-width='1.5' stroke-linecap='round'><path d='M1 1.5l5 5 5-5'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px;
+    }
+
+    textarea.inp {
+      min-height: 80px;
+      resize: vertical;
+      font-family: var(--font-ui)
+    }
+
+    /* ─── Postprocess toggles ─── */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px
+    }
+
+    .agent-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      transition: all var(--duration-fast);
+      user-select: none;
+      font-size: var(--text-body-xs);
+    }
+
+    .agent-toggle:hover {
+      border-color: var(--border-strong)
+    }
+
+    .agent-toggle.on {
+      border-color: currentColor;
+      background: color-mix(in srgb, currentColor 10%, transparent)
+    }
+
+    .agent-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-pill);
+      background: currentColor;
+      flex-shrink: 0
+    }
+
+    /* ─── Content area ─── */
+    .content {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-page)
+    }
+
+    /* ─── Tabs ─── */
+    .tablist {
+      display: flex;
+      gap: 0;
+      border-bottom: .5px solid var(--border-subtle);
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-shrink: 0;
+      background: var(--bg-elevated);
+    }
+
+    .tablist::-webkit-scrollbar {
+      display: none
+    }
+
+    .tab {
+      position: relative;
+      padding: var(--space-3) var(--space-4);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      color: var(--fg-muted);
+      font-size: var(--text-body-sm);
+      font-weight: 500;
+      white-space: nowrap;
+      transition: color var(--duration-fast);
+      font-family: var(--font-ui);
+    }
+
+    .tab:hover {
+      color: var(--fg-secondary)
+    }
+
+    .tab[aria-selected=true] {
+      color: var(--fg-primary)
+    }
+
+    .tab[aria-selected=true]::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 -1px 0;
+      height: 2px;
+      background: var(--brand-600);
+    }
+
+    .tab-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-6);
+      display: none
+    }
+
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5)
+    }
+
+    /* ─── Generate panel ─── */
+    .gen-prompt-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3)
+    }
+
+    .gen-actions {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .gen-status {
+      font-size: var(--text-body-xs);
+      color: var(--fg-muted)
+    }
+
+    .result-card {
+      background: var(--bg-elevated);
+      border: .5px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: .5px solid var(--border-subtle);
+      background: var(--bg-paper-card);
+    }
+
+    .result-label {
+      font-size: var(--text-body-xs);
+      font-weight: 600;
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+      color: var(--fg-muted)
+    }
+
+    .result-body {
+      padding: var(--space-5);
+      font-size: var(--text-body-md);
+      line-height: 1.7;
+      min-height: 60px;
+      white-space: pre-wrap;
+      word-break: break-word
+    }
+
+    .result-body.empty {
+      color: var(--fg-muted);
+      font-style: italic
+    }
+
+    /* word spans */
+    .word-span {
+      cursor: pointer;
+      border-radius: 3px;
+      padding: 0 1px;
+      transition: background .12s
+    }
+
+    .word-span:hover {
+      background: rgba(56, 139, 253, .25)
+    }
+
+    .word-span.changed {
+      background: rgba(63, 185, 80, .15);
+      border-bottom: 1.5px solid var(--success-600)
+    }
+
+    .word-span.punct {
+      cursor: default
+    }
+
+    .word-span.punct:hover {
+      background: none
+    }
+
+    /* ─── Compare panel ─── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4)
+    }
+
+    @media(max-width:900px) {
+      .compare-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* ─── Hypotheses panel ─── */
+    .hyp-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3)
+    }
+
+    .hyp-item {
+      background: var(--bg-elevated);
+      border: .5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .hyp-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-bottom: .5px solid var(--border-subtle);
+      background: var(--bg-sunken);
+    }
+
+    .hyp-num {
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      color: var(--fg-muted)
+    }
+
+    .hyp-score {
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      color: var(--brand-600);
+      margin-left: auto
+    }
+
+    .hyp-body {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-body-sm);
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word
+    }
+
+    /* ─── Stats panel ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: var(--space-3)
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: .5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--space-4) var(--space-4);
+    }
+
+    .stat-val {
+      font-size: var(--text-heading-md);
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--fg-primary);
+      margin-bottom: 2px
+    }
+
+    .stat-key {
+      font-size: var(--text-body-xs);
+      color: var(--fg-muted)
+    }
+
+    /* ─── Agent diff ─── */
+    .diff-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3)
+    }
+
+    .diff-row {
+      display: flex;
+      gap: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: .5px solid var(--border-subtle);
+    }
+
+    .diff-agent {
+      width: 90px;
+      flex-shrink: 0;
+      font-size: var(--text-body-xs);
+      font-weight: 600;
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase
+    }
+
+    .diff-count {
+      min-width: 30px;
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      color: var(--fg-muted)
+    }
+
+    .diff-changes {
+      font-size: var(--text-body-xs);
+      color: var(--fg-secondary);
+      flex: 1;
+      line-height: 1.6
+    }
+
+    del {
+      color: var(--danger-600);
+      background: rgba(248, 81, 73, .1);
+      text-decoration: line-through;
+      padding: 0 2px;
+      border-radius: 2px
+    }
+
+    ins {
+      color: var(--success-600);
+      background: rgba(63, 185, 80, .1);
+      text-decoration: none;
+      padding: 0 2px;
+      border-radius: 2px
+    }
+
+    /* ─── Word popup ─── */
+    .word-popup {
+      position: fixed;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      z-index: 600;
+      min-width: 190px;
+      box-shadow: var(--shadow-lg);
+      font-size: var(--text-body-sm);
+      animation: popup-in var(--duration-base) var(--ease-emphasized);
+    }
+
+    .word-popup-title {
+      color: var(--fg-muted);
+      font-size: var(--text-body-xs);
+      margin-bottom: var(--space-2);
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase
+    }
+
+    .word-alt {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--fg-primary);
+      transition: background var(--duration-fast);
+      font-size: var(--text-body-sm)
+    }
+
+    .word-alt:hover {
+      background: var(--brand-100);
+      color: var(--brand-600)
+    }
+
+    .word-alt-custom {
+      display: flex;
+      gap: 6px;
+      padding: 4px 6px;
+      margin-top: 4px;
+      border-top: .5px solid var(--border-subtle)
+    }
+
+    .word-alt-custom input {
+      flex: 1;
+      background: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      color: var(--fg-primary);
+      padding: 4px 8px;
+      font-size: var(--text-body-xs);
+      font-family: var(--font-ui)
+    }
+
+    .word-alt-custom input:focus {
+      outline: none;
+      border-color: var(--brand-600)
+    }
+
+    .word-alt-custom button {
+      background: var(--brand-600);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: var(--text-body-xs)
+    }
+
+    /* ─── Toast ─── */
+    .toast-root {
+      position: fixed;
+      top: var(--space-6);
+      right: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      z-index: var(--z-toast);
+      pointer-events: none
+    }
+
+    .toast {
+      pointer-events: auto;
+      background: var(--bg-elevated);
+      border: .5px solid var(--border-strong);
+      border-left: 3px solid var(--brand-600);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-3) var(--space-4);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      min-width: 260px;
+      max-width: 380px;
+      animation: toast-in var(--duration-slow) var(--ease-emphasized);
+    }
+
+    .toast.success {
+      border-left-color: var(--success-600)
+    }
+
+    .toast.danger {
+      border-left-color: var(--danger-600)
+    }
+
+    .toast.warning {
+      border-left-color: var(--ochre-600)
+    }
+
+    .toast-body {
+      flex: 1;
+      font-size: var(--text-body-sm);
+      color: var(--fg-secondary)
+    }
+
+    .toast-title {
+      font-weight: 500;
+      font-size: var(--text-body-sm);
+      color: var(--fg-primary);
+      margin-bottom: 2px
+    }
+
+    .toast-close {
+      margin-left: auto;
+      cursor: pointer;
+      color: var(--fg-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: var(--radius-pill);
+      flex-shrink: 0
+    }
+
+    .toast-close:hover {
+      background: var(--bg-sunken);
+      color: var(--fg-primary)
+    }
+
+    /* ─── Validation checks ─── */
+    .check-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-body-xs)
+    }
+
+    .check-item.ok {
+      background: rgba(63, 185, 80, .08);
+      color: var(--success-600)
+    }
+
+    .check-item.warn {
+      background: var(--ochre-100);
+      color: var(--ochre-600)
+    }
+
+    .check-item.err {
+      background: rgba(248, 81, 73, .08);
+      color: var(--danger-600)
+    }
+
+    .check-item.info {
+      background: var(--brand-100);
+      color: var(--info-600)
+    }
+
+    .check-icon {
+      font-size: 13px;
+      flex-shrink: 0
+    }
+
+    /* ─── Progress ─── */
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--bg-sunken);
+      border-radius: 2px;
+      overflow: hidden
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brand-600), #58a6ff);
+      border-radius: 2px;
+      transition: width .3s var(--ease-standard)
+    }
+
+    /* ─── Divider ─── */
+    .divider {
+      height: .5px;
+      background: var(--border-subtle);
+      margin: var(--space-2) 0
+    }
+
+    /* ─── Spinner ─── */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--brand-600);
+      border-radius: var(--radius-pill);
+      animation: spin .7s linear infinite;
+      flex-shrink: 0
+    }
+
+    @keyframes popup-in {
+      from {
+        opacity: 0;
+        transform: scale(.95) translateY(-4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateX(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    /* ─── Scrollable code block ─── */
+    .mono-block {
+      font-family: var(--font-mono);
+      font-size: var(--text-body-xs);
+      color: var(--fg-secondary);
+      background: var(--bg-sunken);
+      border: .5px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: var(--space-3);
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="shell">
+    <!-- ─── Top bar ─── -->
+    <header class="topbar">
+      <a class="topbar-logo" href="/chat.html">
+        <div class="topbar-logo-icon">L</div>
+        Lexis
+      </a>
+      <span class="topbar-title">Inspector / Model Tester</span>
+      <div class="topbar-right">
+        <span id="model-status-badge" class="badge badge-warning">Модель не загружена</span>
+        <a href="/chat.html" class="btn btn-ghost btn-sm">← Чат</a>
+      </div>
+    </header>
+
+    <div class="main">
+      <!-- ─── Sidebar ─── -->
+      <aside class="sidebar">
+
+        <!-- Storage picker -->
+        <div class="sidebar-section">
+          <div class="sidebar-label">Хранилище модели</div>
+
+          <div id="storage-drop" class="storage-drop" onclick="pickFolder()" title="Выбрать папку storage">
+            <span class="storage-drop-icon">📂</span>
+            <strong>Выбрать папку storage</strong><br>
+            <span style="font-size:11px">или перетащить сюда</span>
+          </div>
+
+          <div id="storage-info" class="storage-info hidden" style="margin-top:var(--space-3)">
+            <div class="storage-info-row">
+              <span class="storage-info-key">Путь</span>
+              <span class="storage-info-val" id="si-path">—</span>
+            </div>
+            <div class="storage-info-row">
+              <span class="storage-info-key">Модель</span>
+              <span class="storage-info-val" id="si-model">—</span>
+            </div>
+            <div class="storage-info-row">
+              <span class="storage-info-key">Эпохи</span>
+              <span class="storage-info-val" id="si-epochs">—</span>
+            </div>
+            <div class="storage-info-row">
+              <span class="storage-info-key">Словарь</span>
+              <span class="storage-info-val" id="si-vocab">—</span>
+            </div>
+          </div>
+
+          <div class="check-list hidden" id="storage-checks" style="margin-top:var(--space-3)"></div>
+
+          <input type="file" id="folder-input" webkitdirectory multiple style="display:none"
+            onchange="handleFolderInput(this)">
+
+          <button id="btn-load-model" class="btn btn-primary btn-full btn-sm hidden" style="margin-top:var(--space-3)"
+            onclick="loadModel()">
+            <span class="spinner hidden" id="load-spinner"></span>
+            Загрузить модель
+          </button>
+        </div>
+
+        <!-- Params -->
+        <div class="sidebar-section">
+          <div class="sidebar-label">Параметры генерации</div>
+          <div class="param-grid">
+            <div class="param-row">
+              <div class="param-label">Слов (max)</div>
+              <div class="param-control">
+                <input type="range" id="p-words" min="20" max="400" value="80" oninput="syncSlider(this,'pv-words')">
+                <span class="param-val" id="pv-words">80</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-label">Temperature</div>
+              <div class="param-control">
+                <input type="range" id="p-temp" min="0.3" max="1.8" step="0.05" value="0.85"
+                  oninput="syncSlider(this,'pv-temp',v=>parseFloat(v).toFixed(2))">
+                <span class="param-val" id="pv-temp">0.85</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-label">Top-K</div>
+              <div class="param-control">
+                <input type="range" id="p-topk" min="5" max="100" value="40" oninput="syncSlider(this,'pv-topk')">
+                <span class="param-val" id="pv-topk">40</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-label">Top-P</div>
+              <div class="param-control">
+                <input type="range" id="p-topp" min="0.5" max="1.0" step="0.01" value="0.92"
+                  oninput="syncSlider(this,'pv-topp',v=>parseFloat(v).toFixed(2))">
+                <span class="param-val" id="pv-topp">0.92</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-label">Rep. Penalty</div>
+              <div class="param-control">
+                <input type="range" id="p-rep" min="1.0" max="2.0" step="0.05" value="1.35"
+                  oninput="syncSlider(this,'pv-rep',v=>parseFloat(v).toFixed(2))">
+                <span class="param-val" id="pv-rep">1.35</span>
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-label">No-repeat N-gram</div>
+              <div class="param-control">
+                <input type="range" id="p-ngram" min="0" max="5" step="1" value="3"
+                  oninput="syncSlider(this,'pv-ngram')">
+                <span class="param-val" id="pv-ngram">3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Postprocessing -->
+        <div class="sidebar-section">
+          <div class="sidebar-label">Постпроцессинг</div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div>
+              <div class="param-label" style="margin-bottom:6px">Режим</div>
+              <select class="inp" id="pp-mode" onchange="onModeChange()">
+                <option value="none">Без обработки</option>
+                <option value="basic" selected>Базовый (агенты)</option>
+                <option value="dpa">DPA — Deep Processing</option>
+                <option value="consciousness" id="opt-consciousness">🧠 Consciousness (admin)</option>
+              </select>
+            </div>
+
+            <div id="agents-wrap">
+              <div class="param-label" style="margin-bottom:6px">Агенты</div>
+              <div class="agent-grid" id="agent-grid"></div>
+            </div>
+
+            <div id="dpa-params" class="hidden" style="display:flex;flex-direction:column;gap:var(--space-2)">
+              <div class="param-label" style="margin-bottom:4px">DPA — дополнительно</div>
+              <label
+                style="display:flex;align-items:center;gap:8px;font-size:var(--text-body-xs);color:var(--fg-secondary);cursor:pointer">
+                <input type="checkbox" id="dpa-conserve" checked style="accent-color:var(--brand-600)">
+                Консервативная замена (×1.1 бонус оригиналу)
+              </label>
+            </div>
+
+            <div id="consciousness-params" class="hidden" style="display:flex;flex-direction:column;gap:var(--space-2)">
+              <div class="param-label" style="margin-bottom:4px">Consciousness</div>
+              <div class="param-row">
+                <div class="param-label">Гипотез N</div>
+                <div class="param-control">
+                  <input type="range" id="c-n" min="2" max="8" value="5" oninput="syncSlider(this,'cv-n')">
+                  <span class="param-val" id="cv-n">5</span>
+                </div>
+              </div>
+              <div class="param-row">
+                <div class="param-label">Passes (рефайн)</div>
+                <div class="param-control">
+                  <input type="range" id="c-passes" min="0" max="4" value="2" oninput="syncSlider(this,'cv-passes')">
+                  <span class="param-val" id="cv-passes">2</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Corrections -->
+        <div class="sidebar-section">
+          <div class="sidebar-label">Авто-замены</div>
+          <textarea class="inp" id="corrections-inp" rows="4"
+            placeholder="ошибка: исправление&#10;неправильно: правильно"></textarea>
+          <div style="font-size:var(--text-body-xs);color:var(--fg-muted);margin-top:4px">Формат «слово: замена», по
+            одной в строку</div>
+        </div>
+
+      </aside>
+
+      <!-- ─── Content ─── -->
+      <div class="content">
+
+        <!-- Tabs -->
+        <div class="tablist" role="tablist">
+          <button class="tab" role="tab" aria-selected="true" onclick="switchTab('generate')"
+            id="ttab-generate">Генерация</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="switchTab('compare')"
+            id="ttab-compare">Сравнение</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="switchTab('hypotheses')" id="ttab-hypotheses"
+            style="display:none">Гипотезы</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="switchTab('diff')"
+            id="ttab-diff">Агент-диф</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="switchTab('stats')"
+            id="ttab-stats">Статистика</button>
+        </div>
+
+        <!-- ─── Generate tab ─── -->
+        <div class="tab-panel active" id="panel-generate">
+
+          <div class="gen-prompt-wrap">
+            <label style="font-size:var(--text-body-sm);font-weight:500;color:var(--fg-secondary)">Начало текста
+              (prompt)</label>
+            <textarea class="inp" id="gen-prompt" rows="3" placeholder="Введите начало текста…"></textarea>
+            <div class="gen-actions">
+              <button class="btn btn-primary" id="btn-generate" onclick="doGenerate()" disabled>
+                <span class="spinner hidden" id="gen-spinner"></span>
+                ✦ Генерировать
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="doClear()">Очистить</button>
+              <button class="btn btn-ghost btn-sm" onclick="doRegenerate()" id="btn-regen" style="display:none">↺
+                Перегенерировать</button>
+              <span class="gen-status" id="gen-status"></span>
+            </div>
+          </div>
+
+          <!-- Result: raw -->
+          <div class="result-card" id="card-raw" style="display:none">
+            <div class="result-header">
+              <span class="result-label">Сырой вывод модели</span>
+              <div style="margin-left:auto;display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm btn-icon" title="Копировать"
+                  onclick="copyText('raw-text')">⎘</button>
+              </div>
+            </div>
+            <div class="result-body" id="raw-text"></div>
+          </div>
+
+          <!-- Result: processed -->
+          <div class="result-card" id="card-processed" style="display:none">
+            <div class="result-header">
+              <span class="result-label">Обработанный текст</span>
+              <span class="badge badge-brand" id="pp-mode-label">—</span>
+              <div style="margin-left:auto;display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm btn-icon" title="Копировать"
+                  onclick="copyText('processed-text')">⎘</button>
+              </div>
+            </div>
+            <div class="result-body" id="processed-text"></div>
+          </div>
+
+          <!-- Consciousness best -->
+          <div class="result-card hidden" id="card-best">
+            <div class="result-header">
+              <span class="result-label">Лучшая гипотеза (Consciousness)</span>
+              <span class="badge badge-success" id="best-score-badge">—</span>
+            </div>
+            <div class="result-body" id="best-text"></div>
+          </div>
+
+        </div>
+
+        <!-- ─── Compare tab ─── -->
+        <div class="tab-panel" id="panel-compare">
+          <div style="font-size:var(--text-body-sm);color:var(--fg-muted)">Сравнение сырого вывода и обработанного
+            текста. Сначала выполните генерацию.</div>
+          <div class="compare-grid" id="compare-grid">
+            <div class="result-card">
+              <div class="result-header"><span class="result-label">До обработки</span></div>
+              <div class="result-body" id="cmp-raw">—</div>
+            </div>
+            <div class="result-card">
+              <div class="result-header"><span class="result-label">После обработки</span></div>
+              <div class="result-body" id="cmp-processed">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Hypotheses tab ─── -->
+        <div class="tab-panel" id="panel-hypotheses">
+          <div style="font-size:var(--text-body-sm);color:var(--fg-muted)">Все гипотезы Consciousness алгоритма.
+            Доступно после генерации в режиме Consciousness.</div>
+          <div class="hyp-list" id="hyp-list"></div>
+        </div>
+
+        <!-- ─── Diff tab ─── -->
+        <div class="tab-panel" id="panel-diff">
+          <div style="font-size:var(--text-body-sm);color:var(--fg-muted)">Изменения по каждому агенту постпроцессинга.
+            Сначала выполните генерацию.</div>
+          <div class="diff-wrap" id="diff-wrap"></div>
+        </div>
+
+        <!-- ─── Stats tab ─── -->
+        <div class="tab-panel" id="panel-stats">
+          <div class="stats-grid" id="stats-grid"></div>
+          <div class="divider"></div>
+          <div id="stats-extra" style="display:flex;flex-direction:column;gap:var(--space-3)"></div>
+        </div>
+
+      </div><!-- .content -->
+    </div><!-- .main -->
+  </div><!-- .shell -->
+
+  <!-- Word popup -->
+  <div class="word-popup hidden" id="word-popup">
+    <div class="word-popup-title">Альтернативы</div>
+    <div id="word-alts"></div>
+    <div class="word-alt-custom">
+      <input type="text" id="word-custom-inp" placeholder="Своё слово…">
+      <button onclick="applyCustomWord()">OK</button>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toast-root" id="toast-root"></div>
+
+  <script>
+    // ───────────────────────────────────────────────────────────────
+    //  Globals & helpers
+    // ───────────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const show = el => { const e = typeof el === 'string' ? $(el) : el; if (e) e.classList.remove('hidden'); };
+    const hide = el => { const e = typeof el === 'string' ? $(el) : el; if (e) e.classList.add('hidden'); };
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    function syncSlider(el, valId, fmt) {
+      const min = parseFloat(el.min), max = parseFloat(el.max);
+      const pct = (parseFloat(el.value) - min) / (max - min) * 100;
+      el.style.setProperty('--pct', pct + '%');
+      $(valId).textContent = fmt ? fmt(el.value) : el.value;
+    }
+    document.querySelectorAll('input[type=range]').forEach(el => {
+      const vid = el.id.replace(/^[pc]-/, v => v === 'p-' ? 'pv-' : 'cv-');
+      const fmt = el.step && parseFloat(el.step) < 1 ? v => parseFloat(v).toFixed(2) : null;
+      syncSlider(el, vid.replace('p-', 'pv-').replace('c-', 'cv-'), fmt);
+    });
+
+    // ───────────────────────────────────────────────────────────────
+    //  Toast
+    // ───────────────────────────────────────────────────────────────
+    function toast(msg, kind = 'info', title = '') {
+      const root = $('toast-root');
+      const t = document.createElement('div');
+      t.className = `toast ${kind}`;
+      t.innerHTML = `<div class="toast-body">${title ? `<div class="toast-title">${esc(title)}</div>` : ''}${esc(msg)}</div><div class="toast-close" onclick="this.parentElement.remove()">✕</div>`;
+      root.appendChild(t);
+      setTimeout(() => t.style.opacity = '0', 3200);
+      setTimeout(() => t.remove(), 3600);
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Agent definitions
+    // ───────────────────────────────────────────────────────────────
+    const AGENTS = [
+      { id: 1, name: 'Очистка', key: 'clean', color: 'var(--a1)', desc: 'Мусор, скобки, спецтокены' },
+      { id: 2, name: 'Грамматика', key: 'grammar', color: 'var(--a2)', desc: 'Числ./предлог/прил. согласование' },
+      { id: 3, name: 'Пунктуация', key: 'punct', color: 'var(--a3)', desc: 'Запятые, точки, тире' },
+      { id: 4, name: 'Дедупликация', key: 'dedup', color: 'var(--a4)', desc: 'Точные и похожие предложения' },
+      { id: 5, name: 'Повторы', key: 'repeats', color: 'var(--a5)', desc: 'Одинаковые слова рядом' },
+      { id: 6, name: 'Фрагменты', key: 'fragments', color: 'var(--a6)', desc: 'Обрывки, висячие союзы' },
+      { id: 7, name: 'Стиль', key: 'style', color: 'var(--a7)', desc: 'Паразиты речи, штампы' },
+      { id: 8, name: 'Капитализация', key: 'caps', color: 'var(--a8)', desc: 'Заглавные после знаков' },
+      { id: 9, name: 'Разнообразие', key: 'lexdiv', color: 'var(--a9)', desc: 'Синонимы частых слов' },
+    ];
+
+    const agentState = {};
+    AGENTS.forEach(a => agentState[a.key] = true);
+
+    function buildAgentGrid() {
+      const grid = $('agent-grid');
+      grid.innerHTML = '';
+      AGENTS.forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'agent-toggle on';
+        el.style.color = a.color;
+        el.dataset.key = a.key;
+        el.title = a.desc;
+        el.innerHTML = `<div class="agent-dot"></div><span>${a.name}</span>`;
+        el.onclick = () => {
+          agentState[a.key] = !agentState[a.key];
+          el.classList.toggle('on', agentState[a.key]);
+        };
+        grid.appendChild(el);
+      });
+    }
+    buildAgentGrid();
+
+    // ───────────────────────────────────────────────────────────────
+    //  Mode change
+    // ───────────────────────────────────────────────────────────────
+    function onModeChange() {
+      const m = $('pp-mode').value;
+      toggle($('agents-wrap'), m === 'basic');
+      toggle($('dpa-params'), m === 'dpa');
+      toggle($('consciousness-params'), m === 'consciousness');
+      if (m === 'consciousness') {
+        $('ttab-hypotheses').style.display = '';
+      } else {
+        $('ttab-hypotheses').style.display = 'none';
+      }
+    }
+    function toggle(el, show_) {
+      const e = typeof el === 'string' ? $(el) : el;
+      if (!e) return;
+      if (show_) { e.classList.remove('hidden'); e.style.display = ''; }
+      else { e.classList.add('hidden'); }
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Tabs
+    // ───────────────────────────────────────────────────────────────
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const btn = $('ttab-' + name);
+      if (btn) btn.setAttribute('aria-selected', 'true');
+      const panel = $('panel-' + name);
+      if (panel) panel.classList.add('active');
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Storage folder picker
+    // ───────────────────────────────────────────────────────────────
+    let storageFiles = {}; // path -> File
+    let storageValid = false;
+    let modelLoaded = false;
+
+    const REQUIRED_PATHS = [
+      'storage/checkpoints/best_model.pt',
+      'storage/vocab.json',
+      'storage/textreator.db',
+    ];
+    const OPTIONAL_PATHS = [
+      'storage/checkpoints/epoch_0001.pt',
+      'storage/checkpoints/epoch_0005.pt',
+      'storage/checkpoints/epoch_0010.pt',
+      'storage/checkpoints/epoch_0015.pt',
+      'storage/checkpoints/epoch_0019.pt',
+      'storage/datasets',
+      'storage/logs/server.log',
+    ];
+
+    function pickFolder() {
+      $('folder-input').click();
+    }
+
+    function handleFolderInput(input) {
+      const files = Array.from(input.files);
+      storageFiles = {};
+      files.forEach(f => {
+        // Normalize path: remove leading slash, use forward slashes
+        let p = f.webkitRelativePath || f.name;
+        p = p.replace(/\\/g, '/');
+        // strip root folder name, keep storage/...
+        const idx = p.indexOf('storage/');
+        if (idx !== -1) p = p.slice(idx);
+        storageFiles[p] = f;
+      });
+      analyzeStorage();
+    }
+
+    // drag-and-drop on drop zone (directory items won't work via DnD in most browsers, but we handle gracefully)
+    const drop = $('storage-drop');
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.classList.remove('drag');
+      const items = e.dataTransfer?.items;
+      if (items) {
+        toast('Для выбора папки используйте кнопку выбора файлов', 'warning');
+      }
+    });
+
+    async function analyzeStorage() {
+      const keys = Object.keys(storageFiles);
+      const checks = [];
+      let ok = true;
+
+      REQUIRED_PATHS.forEach(p => {
+        const exists = keys.some(k => k === p || k.endsWith(p));
+        checks.push({ label: p.split('/').pop(), ok: exists, msg: p });
+        if (!exists) ok = false;
+      });
+
+      // Find epochs
+      const epochFiles = keys.filter(k => k.match(/epoch_\d{4}\.pt$/));
+      checks.push({ label: `Чекпоинты эпох (${epochFiles.length})`, ok: epochFiles.length > 0, warn: epochFiles.length === 0 });
+
+      // Vocab info
+      const vocabFile = Object.entries(storageFiles).find(([k]) => k.endsWith('vocab.json'));
+      let vocabSize = null;
+      if (vocabFile) {
+        try {
+          const txt = await vocabFile[1].text();
+          const j = JSON.parse(txt);
+          vocabSize = j.w2i ? Object.keys(j.w2i).length : null;
+        } catch { }
+      }
+
+      // Update sidebar info
+      const pathEl = $('si-path');
+      const firstFile = Object.values(storageFiles)[0];
+      const rootPath = firstFile?.webkitRelativePath?.split('/').slice(0, -2).join('/') || 'storage';
+      $('si-path').textContent = rootPath;
+      $('si-model').textContent = keys.some(k => k.endsWith('best_model.pt')) ? 'best_model.pt' : epochFiles[epochFiles.length - 1]?.split('/').pop() || '—';
+      $('si-epochs').textContent = epochFiles.length > 0 ? epochFiles.length + ' файл(ов)' : '—';
+      $('si-vocab').textContent = vocabSize ? fmtK(vocabSize) + ' токенов' : '—';
+
+      show('storage-info');
+
+      // Render checks
+      const cl = $('storage-checks');
+      cl.innerHTML = '';
+      checks.forEach(c => {
+        const div = document.createElement('div');
+        const cls = c.ok ? 'ok' : c.warn ? 'warn' : 'err';
+        const icon = c.ok ? '✓' : c.warn ? '⚠' : '✗';
+        div.className = `check-item ${cls}`;
+        div.innerHTML = `<span class="check-icon">${icon}</span>${esc(c.label)}`;
+        cl.appendChild(div);
+      });
+      show(cl);
+
+      storageValid = ok;
+      if (ok) {
+        show('btn-load-model');
+        toast('Структура storage корректна', 'success', 'Готово');
+      } else {
+        hide('btn-load-model');
+        toast('Не найдены обязательные файлы в storage', 'danger', 'Ошибка структуры');
+      }
+    }
+
+    function fmtK(n) {
+      if (!n && n !== 0) return '—';
+      if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(n);
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Model load (connects to running Lexis server)
+    // ───────────────────────────────────────────────────────────────
+    let currentModelVid = null;
+
+    async function loadModel() {
+      if (!storageValid) { toast('Выберите корректную папку storage', 'danger'); return; }
+
+      // Найти файл best_model.pt в выбранной папке
+      const bestModelFile = Object.entries(storageFiles).find(([path]) => path.endsWith('best_model.pt'))?.[1];
+      if (!bestModelFile) {
+        toast('Не найден best_model.pt в выбранной папке', 'danger');
+        return;
+      }
+
+      show('load-spinner');
+      $('btn-load-model').disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', bestModelFile, 'best_model.pt');
+
+        const res = await fetch('/api/model/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          throw new Error(data.error || 'Ошибка загрузки на сервер');
+        }
+
+        modelLoaded = true;
+        $('model-status-badge').textContent = 'Модель загружена из storage';
+        $('model-status-badge').className = 'badge badge-success';
+        $('btn-generate').disabled = false;
+        toast(`Модель ${data.params?.d_model || ''} загружена`, 'success', 'Готово');
+
+      } catch (e) {
+        toast(e.message || 'Ошибка загрузки', 'danger');
+      } finally {
+        hide('load-spinner');
+        $('btn-load-model').disabled = false;
+      }
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Generation
+    // ───────────────────────────────────────────────────────────────
+    let lastRaw = '';
+    let lastProcessed = '';
+    let lastResult = null;
+
+    function getParams() {
+      return {
+        n_words: parseInt($('p-words').value),
+        temperature: parseFloat($('p-temp').value),
+        top_k: parseInt($('p-topk').value),
+        top_p: parseFloat($('p-topp').value),
+        rep_penalty: parseFloat($('p-rep').value),
+        no_repeat_ngram: parseInt($('p-ngram').value),
+      };
+    }
+
+    function getCorrections() {
+      const text = $('corrections-inp').value.trim();
+      if (!text) return {};
+      const result = {};
+      text.split('\n').forEach(line => {
+        const [k, ...rest] = line.split(':');
+        if (k && rest.length) result[k.trim()] = rest.join(':').trim();
+      });
+      return result;
+    }
+
+    function getPPConfig() {
+      const mode = $('pp-mode').value;
+      const active_agents = mode === 'basic' ? Object.entries(agentState).filter(([k, v]) => v).map(([k]) => k) : [];
+      return {
+        mode,
+        active_agents,
+        dpa_conserve: $('dpa-conserve').checked,
+        consciousness: {
+          n_hypotheses: parseInt($('c-n').value),
+          refine_passes: parseInt($('c-passes').value),
+        }
+      };
+    }
+
+    async function doGenerate() {
+      if (!modelLoaded) { toast('Сначала загрузите модель', 'warning'); return; }
+
+      const prompt = $('gen-prompt').value.trim();
+      if (!prompt) { toast('Введите начало текста', 'warning'); return; }
+
+      $('btn-generate').disabled = true;
+      show('gen-spinner');
+      $('gen-status').textContent = 'Генерация…';
+
+      try {
+        const params = getParams();
+        const corrections = getCorrections();
+        const pp = getPPConfig();
+
+        // First get chats list (need a chat to generate)
+        let chatId = null;
+        const chats = await fetch('/api/chats').then(r => r.json()).catch(() => []);
+        if (chats.length > 0) {
+          chatId = chats[0].id;
+        } else {
+          const nc = await fetch('/api/chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Inspector' }) }).then(r => r.json());
+          chatId = nc.id;
+        }
+
+        const use_dpa = pp.mode === 'dpa';
+        const use_consciousness = pp.mode === 'consciousness';
+
+        const body = {
+          prompt,
+          n_words: params.n_words,
+          temperature: params.temperature,
+          top_k: params.top_k,
+          top_p: params.top_p,
+          repetition_penalty: params.rep_penalty,
+          no_repeat_ngram: params.no_repeat_ngram,
+          deep_process: use_dpa,
+          consciousness: use_consciousness,
+          consciousness_config: pp.consciousness,
+          active_agents: pp.active_agents,
+          corrections,
+          inspector_mode: true, // request full agent diff
+        };
+
+        const t0 = Date.now();
+        const res = await fetch(`/api/chats/${chatId}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
+
+        if (data.error) throw new Error(data.error);
+
+        lastRaw = data.raw || data.text || '';
+        lastProcessed = data.text || '';
+        lastResult = data;
+
+        $('gen-status').textContent = `Готово за ${elapsed}с`;
+        $('btn-regen').style.display = '';
+
+        renderResults(data, prompt, elapsed);
+        renderCompare(lastRaw, lastProcessed);
+        renderDiff(data.agent_diff || []);
+        renderStats(data, params, elapsed);
+        if (use_consciousness && data.hypotheses) {
+          renderHypotheses(data.hypotheses, data.scores || []);
+        }
+
+      } catch (e) {
+        toast(e.message || 'Ошибка генерации', 'danger', 'Ошибка');
+        $('gen-status').textContent = 'Ошибка';
+      } finally {
+        $('btn-generate').disabled = false;
+        hide('gen-spinner');
+      }
+    }
+
+    function doRegenerate() {
+      doGenerate();
+    }
+
+    function doClear() {
+      $('gen-prompt').value = '';
+      ['card-raw', 'card-processed', 'card-best'].forEach(id => $(id).style.display = 'none');
+      $('gen-status').textContent = '';
+      $('btn-regen').style.display = 'none';
+      $('diff-wrap').innerHTML = '';
+      $('stats-grid').innerHTML = '';
+      $('hyp-list').innerHTML = '';
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Render results
+    // ───────────────────────────────────────────────────────────────
+    const PP_LABELS = { none: 'Без обработки', basic: 'Агенты', dpa: 'DPA', consciousness: 'Consciousness' };
+
+    function renderResults(data, prompt, elapsed) {
+      const mode = $('pp-mode').value;
+      const raw = data.raw || data.text || '';
+      const processed = data.text || '';
+
+      // Raw
+      $('card-raw').style.display = '';
+      $('raw-text').innerHTML = makeWordSpans(raw, 'raw');
+
+      // Processed
+      if (mode !== 'none') {
+        $('card-processed').style.display = '';
+        $('pp-mode-label').textContent = PP_LABELS[mode] || mode;
+        $('processed-text').innerHTML = makeWordSpans(processed, 'proc');
+      } else {
+        $('card-processed').style.display = 'none';
+      }
+
+      // Consciousness best
+      if (mode === 'consciousness' && data.best) {
+        show('card-best');
+        $('best-text').innerHTML = makeWordSpans(data.best, 'best');
+        $('best-score-badge').textContent = `score: ${data.scores?.[0]?.toFixed(4) || '—'}`;
+      } else {
+        hide('card-best');
+      }
+    }
+
+    function makeWordSpans(text, prefix) {
+      if (!text) return '<span style="color:var(--fg-muted);font-style:italic">—</span>';
+      const parts = text.split(/(\s+|(?<=[^\s])[.,!?;:—–]|[.,!?;:—–](?=\S))/);
+      return parts.map((p, i) => {
+        if (!p.trim() || /^\s+$/.test(p)) return p;
+        if (/^[.,!?;:—–]+$/.test(p)) return `<span class="word-span punct">${esc(p)}</span>`;
+        return `<span class="word-span" data-w="${esc(p)}" data-src="${prefix}" onclick="showWordPopup(event,this)">${esc(p)}</span>`;
+      }).join('');
+    }
+
+    function renderCompare(raw, processed) {
+      $('cmp-raw').innerHTML = makeWordSpans(raw, 'cmp-raw') || '<em style="color:var(--fg-muted)">—</em>';
+      $('cmp-processed').innerHTML = makeWordSpans(processed, 'cmp-proc') || '<em style="color:var(--fg-muted)">—</em>';
+    }
+
+    function renderDiff(agentDiff) {
+      const wrap = $('diff-wrap');
+      wrap.innerHTML = '';
+      if (!agentDiff || agentDiff.length === 0) {
+        // Build synthetic diff from comparison
+        if (lastRaw && lastProcessed && lastRaw !== lastProcessed) {
+          const div = document.createElement('div');
+          div.className = 'diff-row';
+          div.innerHTML = `
+        <div class="diff-agent" style="color:var(--brand-600)">Итого</div>
+        <div class="diff-count">${diffCount(lastRaw, lastProcessed)}</div>
+        <div class="diff-changes">${buildInlineDiff(lastRaw, lastProcessed)}</div>
+      `;
+          wrap.appendChild(div);
+        } else {
+          wrap.innerHTML = '<div style="color:var(--fg-muted);font-size:var(--text-body-sm)">Нет данных о диффе. Включите inspector_mode на сервере.</div>';
+        }
+        return;
+      }
+      agentDiff.forEach((a, i) => {
+        const agent = AGENTS[i] || { name: a.name || `Агент ${i + 1}`, color: 'var(--fg-secondary)' };
+        const div = document.createElement('div');
+        div.className = 'diff-row';
+        div.innerHTML = `
+      <div class="diff-agent" style="color:${agent.color}">${esc(agent.name)}</div>
+      <div class="diff-count">${a.changes || 0}</div>
+      <div class="diff-changes">${esc(a.summary || '').slice(0, 200)}</div>
+    `;
+        wrap.appendChild(div);
+      });
+    }
+
+    function diffCount(a, b) {
+      const wa = a.split(/\s+/), wb = b.split(/\s+/);
+      let diff = 0;
+      const len = Math.max(wa.length, wb.length);
+      for (let i = 0; i < len; i++) if (wa[i] !== wb[i]) diff++;
+      return diff;
+    }
+
+    function buildInlineDiff(a, b) {
+      const wa = a.split(/\s+/).slice(0, 40);
+      const wb = b.split(/\s+/).slice(0, 40);
+      const out = [];
+      for (let i = 0; i < Math.max(wa.length, wb.length); i++) {
+        if (wa[i] === wb[i]) { out.push(esc(wa[i] || '')); }
+        else {
+          if (wa[i]) out.push(`<del>${esc(wa[i])}</del>`);
+          if (wb[i]) out.push(`<ins>${esc(wb[i])}</ins>`);
+        }
+      }
+      if (Math.max(wa.length, wb.length) < Math.max(a.split(/\s+/).length, b.split(/\s+/).length)) out.push('…');
+      return out.join(' ');
+    }
+
+    function renderStats(data, params, elapsed) {
+      const grid = $('stats-grid');
+      grid.innerHTML = '';
+      const pp = lastProcessed || data.text || '';
+      const raw = lastRaw || data.raw || '';
+
+      const wordCount = pp.split(/\s+/).filter(Boolean).length;
+      const rawWords = raw.split(/\s+/).filter(Boolean).length;
+      const uniq = new Set(pp.toLowerCase().split(/\s+/).filter(Boolean)).size;
+      const sents = pp.split(/[.!?]+/).filter(s => s.trim().length > 3).length;
+      const ttr = wordCount > 0 ? (uniq / wordCount * 100).toFixed(1) : 0;
+      const avgWPS = sents > 0 ? (wordCount / sents).toFixed(1) : 0;
+
+      const stats = [
+        { key: 'Слов (итог)', val: wordCount },
+        { key: 'Слов (raw)', val: rawWords },
+        { key: 'Уникальных', val: uniq },
+        { key: 'TTR, %', val: ttr },
+        { key: 'Предложений', val: sents },
+        { key: 'Слов/предл.', val: avgWPS },
+        { key: 'Время, с', val: elapsed },
+        { key: 'Temperature', val: params.temperature.toFixed(2) },
+      ];
+
+      if (data.stats) {
+        Object.entries(data.stats).forEach(([k, v]) => stats.push({ key: k, val: v }));
+      }
+
+      stats.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'stat-card';
+        div.innerHTML = `<div class="stat-val">${esc(String(s.val))}</div><div class="stat-key">${esc(s.key)}</div>`;
+        grid.appendChild(div);
+      });
+
+      // Extra: score breakdown for consciousness
+      const extra = $('stats-extra');
+      extra.innerHTML = '';
+      if (data.scores && data.scores.length) {
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:var(--text-body-sm);font-weight:600;color:var(--fg-secondary)';
+        title.textContent = 'Оценки гипотез (Consciousness)';
+        extra.appendChild(title);
+        const mono = document.createElement('div');
+        mono.className = 'mono-block';
+        mono.textContent = data.scores.map((s, i) => `#${i + 1}: ${s.toFixed(4)}`).join('\n');
+        extra.appendChild(mono);
+      }
+    }
+
+    function renderHypotheses(hypotheses, scores) {
+      const list = $('hyp-list');
+      list.innerHTML = '';
+      hypotheses.forEach((text, i) => {
+        const div = document.createElement('div');
+        div.className = 'hyp-item';
+        div.innerHTML = `
+      <div class="hyp-header">
+        <span class="hyp-num">Гипотеза #${i + 1}</span>
+        <span class="hyp-score">score: ${scores[i]?.toFixed(4) || '—'}</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:var(--space-2)" onclick="copyText('hyp-body-${i}')">⎘</button>
+      </div>
+      <div class="hyp-body" id="hyp-body-${i}">${esc(text)}</div>
+    `;
+        list.appendChild(div);
+      });
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Word popup
+    // ───────────────────────────────────────────────────────────────
+    let activeWordEl = null;
+
+    function showWordPopup(e, el) {
+      e.stopPropagation();
+      activeWordEl = el;
+      const popup = $('word-popup');
+      const alts = $('word-alts');
+      alts.innerHTML = '';
+
+      const word = el.dataset.w;
+      const synonyms = getSynonyms(word);
+      synonyms.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'word-alt';
+        div.textContent = s;
+        div.onclick = () => { el.textContent = s; el.dataset.w = s; popup.classList.add('hidden'); };
+        alts.appendChild(div);
+      });
+
+      $('word-custom-inp').value = '';
+      popup.classList.remove('hidden');
+
+      const rect = el.getBoundingClientRect();
+      let left = rect.left, top = rect.bottom + 6;
+      if (left + 200 > window.innerWidth) left = window.innerWidth - 210;
+      if (top + 200 > window.innerHeight) top = rect.top - popup.offsetHeight - 6;
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+    }
+
+    function applyCustomWord() {
+      const val = $('word-custom-inp').value.trim();
+      if (!val || !activeWordEl) return;
+      activeWordEl.textContent = val;
+      activeWordEl.dataset.w = val;
+      $('word-popup').classList.add('hidden');
+    }
+
+    document.addEventListener('click', () => $('word-popup').classList.add('hidden'));
+    $('word-popup').addEventListener('click', e => e.stopPropagation());
+
+    const SYNS = {
+      'сказал': ['произнёс', 'ответил', 'добавил', 'заметил', 'промолвил'],
+      'пошёл': ['направился', 'двинулся', 'зашагал', 'побрёл'],
+      'смотрел': ['глядел', 'наблюдал', 'всматривался', 'созерцал'],
+      'большой': ['огромный', 'крупный', 'немаленький', 'внушительный'],
+      'маленький': ['небольшой', 'крошечный', 'миниатюрный', 'крохотный'],
+      'хороший': ['отличный', 'прекрасный', 'замечательный', 'превосходный'],
+      'плохой': ['скверный', 'неудачный', 'нехороший', 'паршивый'],
+      'быстро': ['стремительно', 'молниеносно', 'проворно', 'живо'],
+      'медленно': ['неторопливо', 'плавно', 'степенно', 'вяло'],
+      'красивый': ['прекрасный', 'изящный', 'великолепный', 'чудесный'],
+    };
+    function getSynonyms(word) {
+      const w = word.toLowerCase().replace(/[^а-яёa-z]/g, '');
+      return SYNS[w] || ['—'];
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Copy
+    // ───────────────────────────────────────────────────────────────
+    function copyText(id) {
+      const el = $(id);
+      if (!el) return;
+      const text = el.innerText || el.textContent;
+      navigator.clipboard.writeText(text).then(() => toast('Скопировано', 'success')).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+        toast('Скопировано', 'success');
+      });
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  Init: check server
+    // ───────────────────────────────────────────────────────────────
+    (async function init() {
+      try {
+        const r = await fetch('/api/auth/me', { signal: AbortSignal.timeout(2000) });
+        if (r.ok) {
+          const user = await r.json();
+          if (user?.username) {
+            $('model-status-badge').textContent = `Подключено (${user.username})`;
+            $('model-status-badge').className = 'badge badge-brand';
+            if (user.role === 'admin') {
+              $('opt-consciousness').style.display = '';
+            } else {
+              $('opt-consciousness').style.display = 'none';
+              if ($('pp-mode').value === 'consciousness') $('pp-mode').value = 'basic';
+            }
+          }
+        }
+      } catch { }
+
+      // Sync all sliders on load
+      document.querySelectorAll('input[type=range]').forEach(el => {
+        const base = el.id.startsWith('p-') ? el.id.replace('p-', 'pv-') : el.id.replace('c-', 'cv-');
+        const fmt = el.step && parseFloat(el.step) < 1 ? v => parseFloat(v).toFixed(2) : null;
+        syncSlider(el, base, fmt);
+      });
+    })();
+  </script>
+</body>
+
+</html>
