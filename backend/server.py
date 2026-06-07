@@ -1,4 +1,4 @@
-"""backend/server.py — Lexis v5"""
+﻿"""backend/server.py — Lexis v5"""
 
 import json, time, sys, os, re, threading, logging, secrets
 from pathlib import Path
@@ -29,10 +29,7 @@ from core.config import (
 )
 from core.db import (
     init_db,
-    register,
-    login,
-    logout,
-    get_user_by_token,
+    get_local_user,
     get_chats,
     create_chat,
     delete_chat,
@@ -146,12 +143,7 @@ def _online_list() -> list:
 
 
 # ── Limits ───────────────────────────────────────────────────────────────────
-USER_WORD_LIMIT = 200
-ADMIN_WORD_LIMIT = 2000
-
-
-def _word_limit(role: str) -> int:
-    return ADMIN_WORD_LIMIT if role == "admin" else USER_WORD_LIMIT
+WORD_LIMIT = 2000
 
 
 # ── Queue worker ─────────────────────────────────────────────────────────────
@@ -193,38 +185,19 @@ MAX_FILE_MB = 50
 _start_queue_worker()
 
 
-# ── Auth helpers ─────────────────────────────────────────────────────────────
+# ── Local mode helpers ───────────────────────────────────────────────────────
 
 
-def get_current_user():
-    token = request.cookies.get("token") or request.headers.get("X-Token")
-    user = get_user_by_token(token)
-    if user:
-        _touch_online(user["id"])
+def _local_actor():
+    user = get_local_user()
+    _touch_online(user["id"])
     return user
 
 
-def auth_required(f):
+def local_mode(f):
     @wraps(f)
     def w(*a, **kw):
-        user = get_current_user()
-        if not user:
-            return jsonify({"error": "Не авторизован", "auth": False}), 401
-        g.user = user
-        return f(*a, **kw)
-
-    return w
-
-
-def admin_required(f):
-    @wraps(f)
-    def w(*a, **kw):
-        user = get_current_user()
-        if not user:
-            return jsonify({"error": "Не авторизован"}), 401
-        if user.get("role") != "admin":
-            return jsonify({"error": "Только для администратора"}), 403
-        g.user = user
+        g.user = _local_actor()
         return f(*a, **kw)
 
     return w
@@ -267,82 +240,6 @@ def js_r(fn):
     return send_from_directory(FRONTEND / "js", fn)
 
 
-# ── Auth API ─────────────────────────────────────────────────────────────────
-
-
-@app.route("/api/auth/register", methods=["POST"])
-def api_register():
-    d = request.json or {}
-    u = d.get("username", "").strip()
-    p = d.get("password", "")
-    if len(u) < 2:
-        return jsonify({"error": "Имя минимум 2 символа"}), 400
-    if len(p) < 4:
-        return jsonify({"error": "Пароль минимум 4 символа"}), 400
-    result = register(u, p, ip=_get_ip())
-    if not result["ok"]:
-        return jsonify(result), 400
-    lr = login(u, p, ip=_get_ip())
-    resp = jsonify({"ok": True, "username": u, "role": lr["role"]})
-    resp.set_cookie(
-        "token", lr["token"], max_age=86400 * 30, httponly=True, samesite="Lax"
-    )
-    return resp
-
-
-@app.route("/api/auth/login", methods=["POST"])
-def api_login():
-    d = request.json or {}
-    ip = _get_ip()
-    result = login(d.get("username", ""), d.get("password", ""), ip=ip)
-    if not result["ok"]:
-        return jsonify(result), 401
-    resp = jsonify({"ok": True, "username": result["username"], "role": result["role"]})
-    resp.set_cookie(
-        "token", result["token"], max_age=86400 * 30, httponly=True, samesite="Lax"
-    )
-    return resp
-
-
-@app.route("/api/auth/logout", methods=["POST"])
-def api_logout():
-    token = request.cookies.get("token")
-    if token:
-        logout(token)
-    user = get_current_user()
-    if user:
-        with _online_lock:
-            _online_users.pop(user["id"], None)
-    resp = jsonify({"ok": True})
-    resp.delete_cookie("token")
-    return resp
-
-
-@app.route("/api/auth/me")
-def api_me():
-    user = get_current_user()
-    if not user:
-        return jsonify({"auth": False})
-    return jsonify(
-        {
-            "auth": True,
-            "username": user["username"],
-            "user_id": user["id"],
-            "role": user["role"],
-            "word_limit": _word_limit(user["role"]),
-        }
-    )
-
-
-@app.route("/api/auth/heartbeat", methods=["POST"])
-def api_heartbeat():
-    user = get_current_user()
-    if user:
-        _touch_online(user["id"])
-        return jsonify({"ok": True, "online": _online_count()})
-    return jsonify({"ok": False}), 401
-
-
 # ── Online API ───────────────────────────────────────────────────────────────
 
 
@@ -363,7 +260,7 @@ def api_models_list():
 
 
 @app.route("/api/models", methods=["POST"])
-@admin_required
+@local_mode
 def api_model_create():
     d = request.json or {}
     name = d.get("name", "").strip()
@@ -374,7 +271,7 @@ def api_model_create():
 
 
 @app.route("/api/models/<int:mid>/rename", methods=["POST"])
-@admin_required
+@local_mode
 def api_model_rename(mid):
     name = (request.json or {}).get("name", "").strip()
     if not name:
@@ -404,7 +301,7 @@ def api_version_samples(vid):
 
 
 @app.route("/api/model-samples/<int:sid>/save", methods=["POST"])
-@auth_required
+@local_mode
 def api_save_sample(sid):
     name = (request.json or {}).get("name", "").strip()
     if not name:
@@ -414,14 +311,14 @@ def api_save_sample(sid):
 
 
 @app.route("/api/model-samples/<int:sid>", methods=["DELETE"])
-@auth_required
+@local_mode
 def api_delete_sample(sid):
     delete_model_sample(sid)
     return jsonify({"ok": True})
 
 
 @app.route("/api/models/versions/<int:vid>/load", methods=["POST"])
-@admin_required
+@local_mode
 def api_load_version(vid):
     import torch, shutil
     from core.db import get_conn
@@ -442,13 +339,13 @@ def api_load_version(vid):
 
 
 @app.route("/api/chats")
-@auth_required
+@local_mode
 def api_chats():
     return jsonify(get_chats(g.user["id"]))
 
 
 @app.route("/api/chats", methods=["POST"])
-@auth_required
+@local_mode
 def api_chat_create():
     d = request.json or {}
     vid = d.get("model_version_id")
@@ -457,14 +354,14 @@ def api_chat_create():
 
 
 @app.route("/api/chats/<int:cid>", methods=["DELETE"])
-@auth_required
+@local_mode
 def api_chat_delete(cid):
     delete_chat(cid, g.user["id"])
     return jsonify({"ok": True})
 
 
 @app.route("/api/chats/<int:cid>/rename", methods=["POST"])
-@auth_required
+@local_mode
 def api_chat_rename(cid):
     title = (request.json or {}).get("title", "Новый чат")
     rename_chat(cid, g.user["id"], title)
@@ -472,7 +369,7 @@ def api_chat_rename(cid):
 
 
 @app.route("/api/chats/<int:cid>/set_model", methods=["POST"])
-@auth_required
+@local_mode
 def api_chat_set_model(cid):
     vid = (request.json or {}).get("version_id")
     if vid:
@@ -481,7 +378,7 @@ def api_chat_set_model(cid):
 
 
 @app.route("/api/chats/<int:cid>/messages")
-@auth_required
+@local_mode
 def api_messages(cid):
     return jsonify(get_messages(cid))
 
@@ -491,7 +388,7 @@ def api_messages(cid):
 
 def _load_model(checkpoint_path: str = None):
     import torch
-    from core.model import build as build_model
+    from core.model import build_auto
 
     path = Path(checkpoint_path) if checkpoint_path else CKPT_DIR / "best_model.pt"
     if not path.exists():
@@ -499,9 +396,7 @@ def _load_model(checkpoint_path: str = None):
     ckpt = torch.load(str(path), map_location="cpu", weights_only=True)
     params = ckpt["params"]
     ckpt_vs = ckpt["vocab_size"]
-    model = build_model(ckpt_vs, params)
-    model.load_state_dict(ckpt["model"], strict=True)
-    model.eval()
+    model = build_auto(ckpt_vs, params, ckpt["model"])
     vocab_dir = path.parent.parent if path.parent.name == "checkpoints" else None
     vocab = load_vocab(base_dir=vocab_dir)
     return model, vocab, ckpt_vs
@@ -707,18 +602,12 @@ def _do_generate(params: dict, prompt_text: str) -> dict:
 
 
 @app.route("/api/chats/<int:cid>/generate", methods=["POST"])
-@auth_required
+@local_mode
 def api_generate(cid):
     d = request.json or {}
-    role = g.user.get("role", "user")
-    limit = _word_limit(role)
-    n_words = max(3, min(limit, int(d.get("num_words", 60))))
+    n_words = max(3, min(WORD_LIMIT, int(d.get("num_words", 60))))
 
     mode = d.get("mode", "basic")
-
-    # Extra thinking доступен только админу
-    if mode == "extra_thinking" and role != "admin":
-        return jsonify({"error": "Extra Thinking доступен только администратору"}), 403
 
     params = {
         "num_words": n_words,
@@ -749,19 +638,15 @@ def api_generate(cid):
 
 
 @app.route("/api/generate/queue", methods=["POST"])
-@auth_required
+@local_mode
 def api_queue_generate():
     """
     Поставить запрос в очередь. Возвращает request_id.
     Клиент поллит /api/generate/status/<request_id>.
     """
     d = request.json or {}
-    role = g.user.get("role", "user")
-    limit = _word_limit(role)
-    n_words = max(3, min(limit, int(d.get("num_words", 60))))
+    n_words = max(3, min(WORD_LIMIT, int(d.get("num_words", 60))))
     mode = d.get("mode", "basic")
-    if mode == "extra_thinking" and role != "admin":
-        return jsonify({"error": "Extra Thinking доступен только администратору"}), 403
 
     params = {
         "num_words": n_words,
@@ -790,7 +675,7 @@ def api_queue_generate():
 
 
 @app.route("/api/generate/status/<rid>")
-@auth_required
+@local_mode
 def api_queue_status(rid):
     s = queue_status(rid)
     if not s.get("found"):
@@ -805,7 +690,7 @@ def api_queue_status(rid):
 
 
 @app.route("/api/generate/leave/<rid>", methods=["DELETE"])
-@auth_required
+@local_mode
 def api_queue_leave(rid):
     queue_leave(rid, g.user["id"])
     return jsonify({"ok": True})
@@ -815,7 +700,7 @@ def api_queue_leave(rid):
 
 
 @app.route("/api/word/alternatives", methods=["POST"])
-@auth_required
+@local_mode
 def api_word_alternatives():
     import torch, torch.nn.functional as F
 
@@ -859,13 +744,13 @@ def api_word_alternatives():
 
 
 @app.route("/api/corrections")
-@auth_required
+@local_mode
 def api_corrections_get():
     return jsonify(get_corrections(g.user["id"]))
 
 
 @app.route("/api/corrections", methods=["POST"])
-@auth_required
+@local_mode
 def api_corrections_add():
     d = request.json or {}
     wrong = d.get("wrong", "").strip()
@@ -884,7 +769,7 @@ def api_corrections_add():
 
 
 @app.route("/api/datasets/upload", methods=["POST"])
-@auth_required
+@local_mode
 def api_dataset_upload():
     if "file" not in request.files:
         return jsonify({"error": "Нет файла"}), 400
@@ -912,7 +797,7 @@ def api_dataset_upload():
 
 
 @app.route("/api/datasets")
-@auth_required
+@local_mode
 def api_datasets_list():
     return jsonify(get_user_datasets(g.user["id"]))
 
@@ -921,7 +806,7 @@ def api_datasets_list():
 
 
 @app.route("/api/model/upload", methods=["POST"])
-@admin_required
+@local_mode
 def api_model_upload():
     import torch, shutil
 
@@ -957,7 +842,7 @@ def api_model_upload():
 
 
 @app.route("/api/tokenize/start", methods=["POST"])
-@admin_required
+@local_mode
 def api_tokenize_start():
     global _tokenize_thread, _tokenize_progress
     if _tokenize_thread and _tokenize_thread.is_alive():
@@ -1044,7 +929,7 @@ def _trainer_body(params, vocab_size, n_tokens, n_batches, version_id, model_slu
 
 
 @app.route("/api/train/start", methods=["POST"])
-@admin_required
+@local_mode
 def api_train_start():
     global _trainer_thread, _current_version_id
     with _trainer_lock:
@@ -1102,14 +987,14 @@ def api_train_start():
 
 
 @app.route("/api/train/stop", methods=["POST"])
-@admin_required
+@local_mode
 def api_train_stop():
     request_stop()
     return jsonify({"ok": True, "message": "Сигнал остановки отправлен"})
 
 
 @app.route("/api/train/reset", methods=["POST"])
-@admin_required
+@local_mode
 def api_train_reset():
     if _trainer_thread and _trainer_thread.is_alive():
         return jsonify({"error": "Сначала остановите обучение"}), 400
@@ -1172,9 +1057,9 @@ def api_train_epochs():
     return jsonify(get_all_epochs_from_db())
 
 
-@app.route("/api/admin/logs")
-@admin_required
-def api_admin_logs():
+@app.route("/api/logs")
+@local_mode
+def api_logs():
     log_file = LOG_DIR / "server.log"
     if not log_file.exists():
         return jsonify({"lines": []})
@@ -1193,7 +1078,7 @@ def api_config_get():
 
 
 @app.route("/api/config", methods=["POST"])
-@admin_required
+@local_mode
 def api_config_set():
     cfg = load()
     data = request.json or {}
@@ -1286,7 +1171,7 @@ def api_epochs_rich(vid):
 @app.route(
     "/api/models/versions/<int:vid>/epochs/<int:epoch>/validate", methods=["POST"]
 )
-@admin_required
+@local_mode
 def api_validate_epoch(vid, epoch):
     d = request.json or {}
     name = d.get("name", "").strip()
@@ -1299,7 +1184,7 @@ def api_validate_epoch(vid, epoch):
 @app.route(
     "/api/models/versions/<int:vid>/epochs/<int:epoch>/delete_ckpt", methods=["POST"]
 )
-@admin_required
+@local_mode
 def api_delete_epoch_ckpt(vid, epoch):
     result = delete_epoch_ckpt(vid, epoch)
     return jsonify(result)

@@ -1,4 +1,9 @@
-storage/*
-*/__pycache__/*
+storage/
+model27k/storage/logs/
+model27k/storage/datasets/
+model27k/storage/models/
+__pycache__/
+*/__pycache__/
 *.pyc
+.env
 lexis.zip

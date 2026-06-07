@@ -230,46 +230,17 @@
 
 <body>
 
-  <!-- AUTH -->
-  <div id="auth-screen" class="auth-wrap hidden">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <div class="auth-logo-icon">L</div><span class="auth-logo-text">Lexis</span>
-      </div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Войти</button>
-        <button class="auth-tab" id="tab-reg" onclick="switchTab('reg')">Создать аккаунт</button>
-      </div>
-      <div id="form-login">
-        <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="l-username"
-            type="text" autocomplete="username"></div>
-        <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="l-password"
-            type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-        <button class="btn btn-primary btn-lg" style="width:100%;margin-top:8px" onclick="doLogin()">Войти</button>
-      </div>
-      <div id="form-reg" class="hidden">
-        <div class="input-group"><label class="input-label">Имя пользователя</label><input class="inp" id="r-username"
-            type="text" autocomplete="username"></div>
-        <div class="input-group"><label class="input-label">Пароль</label><input class="inp" id="r-password"
-            type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
-        <button class="btn btn-success btn-lg" style="width:100%;margin-top:8px" onclick="doRegister()">Создать
-          аккаунт</button>
-      </div>
-      <div class="auth-err" id="auth-err"></div>
-    </div>
-  </div>
-
   <!-- APP -->
-  <div id="app-screen" style="display:none;flex-direction:column;height:100vh">
+  <div id="app-screen" style="display:flex;flex-direction:column;height:100vh">
     <nav class="nav">
       <a class="nav-logo" href="/">
         <div class="nav-logo-icon">L</div><span class="nav-logo-text">Lexis</span>
       </a>
       <div style="display:flex;gap:2px">
         <a class="nav-link" href="/">📊 Дашборд</a>
-        <a class="nav-link admin-only hidden" href="/train.html">🧠 Обучение</a>
+        <a class="nav-link" href="/train.html">🧠 Обучение</a>
         <a class="nav-link active" href="/chat.html">💬 Чат</a>
-        <a class="nav-link admin-only hidden" href="/settings.html">⚙️ Настройки</a>
+        <a class="nav-link" href="/settings.html">⚙️ Настройки</a>
       </div>
       <div class="nav-right">
         <div class="online-badge" id="online-badge" title="Пользователей онлайн">
@@ -278,10 +249,9 @@
         <div class="queue-badge hidden" id="queue-badge" title="Очередь генерации">
           ⏳ <span id="queue-count">0</span> в очереди
         </div>
-        <div class="nav-user"><span class="nav-user-dot"></span><span id="nav-username">—</span></div>
-        <span class="tag tag-muted" id="limit-badge" style="font-size:11px" title="Лимит слов на генерацию">200
+        <div class="nav-user"><span class="nav-user-dot"></span><span id="nav-username">Локальный режим</span></div>
+        <span class="tag tag-muted" id="limit-badge" style="font-size:11px" title="Лимит слов на генерацию">2000
           сл.</span>
-        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Выйти</button>
       </div>
     </nav>
 
@@ -320,15 +290,15 @@
             <!-- Family / Model picker -->
             <div class="model-picker">
               <div>
-                <label>🏷 Семейство (Family)</label>
+                <label>Семейство</label>
                 <select class="picker-select" id="sel-family" onchange="onFamilyChange()">
-                  <option value="">— выбери семейство —</option>
+                  <option value="">Готовая модель по умолчанию</option>
                 </select>
               </div>
               <div>
-                <label>🧠 Модель (эпоха)</label>
+                <label>Модель / эпоха</label>
                 <select class="picker-select" id="sel-model" onchange="onModelChange()">
-                  <option value="">— выбери модель —</option>
+                  <option value="">Лучшая встроенная версия</option>
                 </select>
               </div>
             </div>
@@ -374,7 +344,7 @@
               <button class="btn btn-ghost btn-xs" onclick="setPreset(0.6,20,0.8,1.3)">Точный</button>
               <button class="btn btn-ghost btn-xs" onclick="setPreset(1.0,50,0.92,1.3)">Норм</button>
               <button class="btn btn-ghost btn-xs" onclick="setPreset(1.5,100,0.98,1.2)">Хаос</button>
-              <span class="text-xs text-muted" style="margin-left:auto">Лимит: <b id="limit-display">200</b> сл.</span>
+              <span class="text-xs text-muted" style="margin-left:auto">Лимит: <b id="limit-display">2000</b> сл.</span>
             </div>
             <!-- Режим постпроцессинга -->
             <div style="margin-bottom:8px">
@@ -386,7 +356,7 @@
                 <button class="mode-btn" id="mode-btn-dpa" onclick="setMode('dpa')">
                   <span class="mode-icon">🔬</span> DPA
                 </button>
-                <button class="mode-btn admin-mode hidden" id="mode-btn-et" onclick="setMode('extra_thinking')">
+                <button class="mode-btn" id="mode-btn-et" onclick="setMode('extra_thinking')">
                   <span class="mode-icon">🧠</span> Extra Thinking
                 </button>
               </div>
@@ -489,19 +459,9 @@
     let _currentChatId = null, _chats = [], _generating = false;
     let _families = [], _selectedVersionId = null, _selectedEpoch = null, _selectedCkptPath = null;
 
-    // ── Auth ──
-    function switchTab(t) { const isL = t === 'login'; $('tab-login').classList.toggle('active', isL); $('tab-reg').classList.toggle('active', !isL); toggle('form-login', isL); toggle('form-reg', !isL); tx('auth-err', ''); }
-    async function doLogin() { const u = $('l-username')?.value.trim(), p = $('l-password')?.value; if (!u || !p) { tx('auth-err', 'Заполни все поля'); return; } const r = await apiPost('/api/auth/login', { username: u, password: p }); if (!r.ok) { tx('auth-err', r.error || 'Ошибка'); return; } await initApp(); }
-    async function doRegister() { const u = $('r-username')?.value.trim(), p = $('r-password')?.value; if (!u || !p) { tx('auth-err', 'Заполни все поля'); return; } const r = await apiPost('/api/auth/register', { username: u, password: p }); if (!r.ok) { tx('auth-err', r.error || 'Ошибка'); return; } await initApp(); }
-    async function doLogout() { await apiPost('/api/auth/logout'); _me = null; $('app-screen').style.display = 'none'; $('auth-screen').classList.remove('hidden'); }
-
     async function initApp() {
-      _me = await apiGet('/api/auth/me');
-      if (!_me.auth) { hide('app-screen'); $('auth-screen').classList.remove('hidden'); return; }
-      $('auth-screen').classList.add('hidden'); $('app-screen').style.display = 'flex';
-      tx('nav-username', _me.username);
-      if (_me.role === 'admin') document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
       bindAllParams();
+      updateWordLimitUI(2000);
       await loadFamiliesForChat();
       await loadChats();
     }
@@ -510,18 +470,28 @@
     async function loadFamiliesForChat() {
       _families = await apiGet('/api/models/families');
       const sel = $('sel-family'); if (!sel) return;
-      sel.innerHTML = '<option value="">— выбери семейство —</option>';
+      sel.innerHTML = '<option value="">Готовая модель по умолчанию</option>';
       _families.forEach(f => {
         const opt = document.createElement('option');
         opt.value = f.id; opt.textContent = f.name;
         sel.appendChild(opt);
       });
+      if (_families.length) {
+        sel.value = _families[0].id;
+        onFamilyChange();
+        const modelSel = $('sel-model');
+        const firstModel = modelSel?.querySelector('option[value^="{"]');
+        if (firstModel) {
+          modelSel.value = firstModel.value;
+          onModelChange();
+        }
+      }
     }
 
     function onFamilyChange() {
       const fid = parseInt($('sel-family')?.value || 0);
       const sel = $('sel-model'); if (!sel) return;
-      sel.innerHTML = '<option value="">— выбери модель —</option>';
+      sel.innerHTML = '<option value="">Лучшая встроенная версия</option>';
       const fam = _families.find(f => f.id === fid);
       if (!fam) return;
 
@@ -667,7 +637,7 @@
 
     // ── Mode ──
     let _currentMode = 'basic';
-    let _wordLimit = 200;
+    let _wordLimit = 2000;
     function setMode(m) {
       _currentMode = m;
       ['basic', 'dpa', 'et'].forEach(k => {

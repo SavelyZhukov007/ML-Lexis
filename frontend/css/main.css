@@ -845,84 +845,6 @@ input[type=range] {
   font-weight: 700;
 }
 
-/* ── AUTH PAGE ── */
-.auth-wrap {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-}
-
-.auth-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 40px 36px;
-  width: 380px;
-  max-width: 95%;
-}
-
-.auth-logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
-}
-
-.auth-logo-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 900;
-  color: #fff;
-}
-
-.auth-logo-text {
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.auth-tabs {
-  display: flex;
-  background: var(--bg3);
-  border-radius: var(--rs);
-  padding: 3px;
-  gap: 3px;
-  margin-bottom: 24px;
-}
-
-.auth-tab {
-  flex: 1;
-  padding: 7px;
-  border: none;
-  background: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--muted2);
-  transition: all .15s;
-}
-
-.auth-tab.active {
-  background: var(--bg2);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.auth-err {
-  color: var(--red);
-  font-size: 13px;
-  margin-top: 10px;
-  min-height: 20px;
-  text-align: center;
-}
-
 /* ── CHAT LAYOUT ── */
 .chat-layout {
   display: flex;
@@ -1443,13 +1365,3 @@ input[type=range].mini {
   background: var(--brand-100);
 }
 
-.mode-btn.admin-mode {
-  border-style: dashed;
-}
-
-.mode-btn.admin-mode.active {
-  border-color: var(--ochre-600);
-  color: var(--ochre-600);
-  background: var(--ochre-100);
-  border-style: solid;
-}

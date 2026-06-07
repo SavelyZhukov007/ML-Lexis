@@ -4,18 +4,7 @@ import re
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent.parent
-STORAGE_DIR = ROOT_DIR / "storage"
-MODELS_DIR = STORAGE_DIR / "models"
-CKPT_DIR = STORAGE_DIR / "checkpoints"
-LOG_DIR = STORAGE_DIR / "logs"
-DB_FILE = STORAGE_DIR / "textreator.db"
-STATE_FILE = STORAGE_DIR / "train_state.json"
-CONFIG_FILE = STORAGE_DIR / "config.json"
-DATASETS_DIR = STORAGE_DIR / "datasets"
 ENV_FILE = ROOT_DIR / ".env"
-
-for _d in [STORAGE_DIR, MODELS_DIR, CKPT_DIR, LOG_DIR, DATASETS_DIR]:
-    _d.mkdir(parents=True, exist_ok=True)
 
 
 def _load_env():
@@ -37,25 +26,31 @@ def _env(key: str, default: str = "") -> str:
     return _ENV.get(key, default)
 
 
-ADMIN_USERNAME = _env("LEXIS_ADMIN_USER", "admin")
-ADMIN_PASSWORD = _env("LEXIS_ADMIN_PASS", "")
+def _pick_storage_dir() -> Path:
+    explicit = _env("LEXIS_STORAGE_DIR")
+    if explicit:
+        return Path(explicit).expanduser()
 
-# Если пароль не задан в .env — создаём дефолтный .env при первом запуске
-if not ADMIN_PASSWORD:
-    import secrets
+    bundled = ROOT_DIR / "model27k" / "storage"
+    local = ROOT_DIR / "storage"
+    bundled_model = bundled / "checkpoints" / "best_model.pt"
+    local_model = local / "checkpoints" / "best_model.pt"
+    if bundled_model.exists() and not local_model.exists():
+        return bundled
+    return local
 
-    ADMIN_PASSWORD = secrets.token_urlsafe(12)
-    if not ENV_FILE.exists():
-        ENV_FILE.write_text(
-            f"# Lexis Configuration\n"
-            f"LEXIS_ADMIN_USER={ADMIN_USERNAME}\n"
-            f"LEXIS_ADMIN_PASS={ADMIN_PASSWORD}\n",
-            "utf-8",
-        )
-        print(f"\n  [!] Создан файл .env с паролем администратора")
-        print(f"  [!] Логин: {ADMIN_USERNAME}")
-        print(f"  [!] Пароль: {ADMIN_PASSWORD}")
-        print(f"  [!] Файл: {ENV_FILE}\n")
+
+STORAGE_DIR = _pick_storage_dir()
+MODELS_DIR = STORAGE_DIR / "models"
+CKPT_DIR = STORAGE_DIR / "checkpoints"
+LOG_DIR = STORAGE_DIR / "logs"
+DB_FILE = STORAGE_DIR / "textreator.db"
+STATE_FILE = STORAGE_DIR / "train_state.json"
+CONFIG_FILE = STORAGE_DIR / "config.json"
+DATASETS_DIR = STORAGE_DIR / "datasets"
+
+for _d in [STORAGE_DIR, MODELS_DIR, CKPT_DIR, LOG_DIR, DATASETS_DIR]:
+    _d.mkdir(parents=True, exist_ok=True)
 
 
 def slugify(name: str) -> str:

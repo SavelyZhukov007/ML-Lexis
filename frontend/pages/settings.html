@@ -118,8 +118,6 @@
       if (r.ok) { show('save-ok'); setTimeout(() => hide('save-ok'), 2500); }
     }
     async function loadAllCorrections() {
-      const me = await apiGet('/api/auth/me');
-      if (!me.auth) return;
       const list = await apiGet('/api/corrections');
       const el = $('all-corr'); if (!el) return;
       if (!list.length) { el.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:20px">Правок нет</div>'; return; }
@@ -132,7 +130,7 @@
     </div>`).join('');
     }
     async function loadLogs() {
-      const r = await apiGet('/api/admin/logs?n=300');
+      const r = await apiGet('/api/logs?n=300');
       const el = $('log-viewer'); if (!el) return;
       el.innerHTML = '';
       (r.lines || []).forEach(line => {

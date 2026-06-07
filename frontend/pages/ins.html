@@ -1243,7 +1243,7 @@
                 <option value="none">Без обработки</option>
                 <option value="basic" selected>Базовый (агенты)</option>
                 <option value="dpa">DPA — Deep Processing</option>
-                <option value="consciousness" id="opt-consciousness">🧠 Consciousness (admin)</option>
+                <option value="consciousness" id="opt-consciousness">🧠 Consciousness</option>
               </select>
             </div>
 
@@ -2076,22 +2076,9 @@
     //  Init: check server
     // ───────────────────────────────────────────────────────────────
     (async function init() {
-      try {
-        const r = await fetch('/api/auth/me', { signal: AbortSignal.timeout(2000) });
-        if (r.ok) {
-          const user = await r.json();
-          if (user?.username) {
-            $('model-status-badge').textContent = `Подключено (${user.username})`;
-            $('model-status-badge').className = 'badge badge-brand';
-            if (user.role === 'admin') {
-              $('opt-consciousness').style.display = '';
-            } else {
-              $('opt-consciousness').style.display = 'none';
-              if ($('pp-mode').value === 'consciousness') $('pp-mode').value = 'basic';
-            }
-          }
-        }
-      } catch { }
+      $('model-status-badge').textContent = 'Подключено (локальный режим)';
+      $('model-status-badge').className = 'badge badge-brand';
+      $('opt-consciousness').style.display = '';
 
       // Sync all sliders on load
       document.querySelectorAll('input[type=range]').forEach(el => {

@@ -282,8 +282,8 @@ class _LegacyAttention(nn.Module):
         super().__init__()
         self.n_heads = n_heads
         self.d_head = d_model // n_heads
-        self.qkv = nn.Linear(d_model, 3 * d_model)
-        self.proj = nn.Linear(d_model, d_model)
+        self.qkv = nn.Linear(d_model, 3 * d_model, bias=False)
+        self.proj = nn.Linear(d_model, d_model, bias=False)
         mask = torch.tril(torch.ones(seq_len, seq_len)).view(1, 1, seq_len, seq_len)
         self.register_buffer("mask", mask)
 
@@ -468,21 +468,15 @@ def build_auto(vocab_size: int, params: dict, state_dict: dict):
     ]
 
     if missing or unexpected:
-        import logging as _log
-
-        _logger = _log.getLogger("model")
+        details = []
         if missing:
-            _logger.warning(
-                "build_auto missing weights: %s%s",
-                missing[:6],
-                " ..." if len(missing) > 6 else "",
-            )
+            details.append(f"missing keys: {missing}")
         if unexpected:
-            _logger.warning(
-                "build_auto unexpected weights: %s%s",
-                unexpected[:6],
-                " ..." if len(unexpected) > 6 else "",
-            )
+            details.append(f"unexpected keys: {unexpected}")
+        raise RuntimeError(
+            "Checkpoint is incompatible with selected MiniGPT architecture: "
+            + "; ".join(details)
+        )
 
     model.eval()
     return model

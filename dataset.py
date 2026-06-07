@@ -13,15 +13,11 @@
 """
 
 import asyncio
-import aiohttp
-import aiofiles
 import time
 import re
 import hashlib
 import unicodedata
 from pathlib import Path
-from tqdm.asyncio import tqdm
-from bs4 import BeautifulSoup
 import sys
 import subprocess
 import importlib
@@ -43,22 +39,39 @@ def auto_install():
     except ImportError:
         required.append("beautifulsoup4")
     try:
+        import lxml
+    except ImportError:
+        required.append("lxml")
+    try:
         from tqdm.asyncio import tqdm
     except ImportError:
         required.append("tqdm")
     if required:
         print(f"[install] {', '.join(required)} ...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", *required, "-q"])
-        print("✓ Зависимости установлены. Перезапустите скрипт.")
-        sys.exit(0)
+        print("✓ Зависимости установлены.")
 
 
-auto_install()
+def load_runtime_deps():
+    global aiohttp, aiofiles, tqdm, BeautifulSoup
+    import aiohttp as _aiohttp
+    import aiofiles as _aiofiles
+    from tqdm.asyncio import tqdm as _tqdm
+    from bs4 import BeautifulSoup as _BeautifulSoup
 
-import aiohttp
-import aiofiles
-from tqdm.asyncio import tqdm
-from bs4 import BeautifulSoup
+    aiohttp = _aiohttp
+    aiofiles = _aiofiles
+    tqdm = _tqdm
+    BeautifulSoup = _BeautifulSoup
+
+
+try:
+    load_runtime_deps()
+except ImportError:
+    aiohttp = None
+    aiofiles = None
+    tqdm = None
+    BeautifulSoup = None
 
 # ===== Конфигурация =====
 OUT_FILE = Path("text.txt")  # единый выходной файл
@@ -118,6 +131,9 @@ _GARBAGE = re.compile(
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
 _MULTI_NL = re.compile(r"\n{3,}")
 _RU_CHECK = re.compile(r"[а-яёА-ЯЁ]")
+_MARKDOWN_BOLD = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
+_MARKDOWN_ITALIC = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", re.DOTALL)
+_UNDERSCORES = re.compile(r"_+")
 
 
 def clean_text(raw: str) -> str:
@@ -126,6 +142,9 @@ def clean_text(raw: str) -> str:
         return ""
     # Убираем управляющие символы
     raw = unicodedata.normalize("NFC", raw)
+    raw = _MARKDOWN_BOLD.sub(r"\1", raw)
+    raw = _MARKDOWN_ITALIC.sub(r"\1", raw)
+    raw = _UNDERSCORES.sub(" ", raw)
     # Удаляем мусор
     raw = _GARBAGE.sub(" ", raw)
     raw = _MULTI_SPACE.sub(" ", raw)
@@ -357,6 +376,9 @@ async def collect_books():
 
 
 def main():
+    auto_install()
+    load_runtime_deps()
+
     print("\n╔══════════════════════════════════════════════════════╗")
     print("║   Быстрый сборщик книг → text.txt                     ║")
     print("║   Асинхронная загрузка, дедупликация, очистка       ║")

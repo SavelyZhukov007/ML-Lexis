@@ -1,10 +1,8 @@
 import sqlite3
-import hashlib
-import secrets
 import time
 import json
 from pathlib import Path
-from core.config import DB_FILE, ADMIN_USERNAME, ADMIN_PASSWORD, slugify
+from core.config import DB_FILE, slugify
 
 
 def get_conn():
@@ -39,23 +37,35 @@ def _ensure_model_slug_column(conn):
         conn.commit()
 
 
+def _insert_local_user(conn):
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    values = {}
+    if "username" in cols:
+        values["username"] = "local"
+    if "pw_hash" in cols:
+        values["pw_hash"] = ""
+    if "salt" in cols:
+        values["salt"] = ""
+    if "role" in cols:
+        values["role"] = "local"
+    if "admin_ip" in cols:
+        values["admin_ip"] = ""
+    names = list(values.keys())
+    placeholders = ",".join("?" for _ in names)
+    conn.execute(
+        f"INSERT INTO users ({','.join(names)}) VALUES ({placeholders})",
+        [values[name] for name in names],
+    )
+    conn.commit()
+
+
 def init_db():
     conn = get_conn()
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS users (
         id        INTEGER PRIMARY KEY AUTOINCREMENT,
         username  TEXT    UNIQUE NOT NULL,
-        pw_hash   TEXT    NOT NULL,
-        salt      TEXT    NOT NULL,
-        role      TEXT    NOT NULL DEFAULT 'user',
-        admin_ip  TEXT,
         created   INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-    );
-    CREATE TABLE IF NOT EXISTS sessions (
-        token    TEXT    PRIMARY KEY,
-        user_id  INTEGER NOT NULL REFERENCES users(id),
-        expires  INTEGER NOT NULL,
-        ip       TEXT
     );
     CREATE TABLE IF NOT EXISTS chats (
         id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,152 +169,25 @@ def init_db():
         _ensure_model_slug_column(conn)
     except Exception:
         pass
-    # Migration: add admin_ip if missing
-    try:
-        _ensure_col(conn, "users", "admin_ip", "TEXT")
-        _ensure_col(conn, "sessions", "ip", "TEXT")
-        conn.commit()
-    except Exception:
-        pass
 
-    # Create admin if not exists
+    row = conn.execute("SELECT id FROM users ORDER BY id ASC LIMIT 1").fetchone()
+    if not row:
+        _insert_local_user(conn)
+    conn.close()
+
+
+def get_local_user() -> dict:
+    conn = get_conn()
     row = conn.execute(
-        "SELECT id FROM users WHERE username=?", (ADMIN_USERNAME,)
+        "SELECT id, username FROM users ORDER BY id ASC LIMIT 1"
     ).fetchone()
     if not row:
-        salt = secrets.token_hex(16)
-        pw_hash = hashlib.sha256((salt + ADMIN_PASSWORD).encode()).hexdigest()
-        conn.execute(
-            "INSERT INTO users (username, pw_hash, salt, role) VALUES (?,?,?,'admin')",
-            (ADMIN_USERNAME, pw_hash, salt),
-        )
-        conn.commit()
+        _insert_local_user(conn)
+        row = conn.execute(
+            "SELECT id, username FROM users WHERE username='local'"
+        ).fetchone()
     conn.close()
-
-
-def _hash(pw: str, salt: str) -> str:
-    return hashlib.sha256((salt + pw).encode()).hexdigest()
-
-
-# ── Admin IP restriction ─────────────────────────────────────────────────────
-# Один администратор на всю локальную сеть (/24 подсеть)
-
-
-def _net24(ip: str) -> str:
-    """Возвращает /24 подсеть IP."""
-    if not ip:
-        return ""
-    parts = ip.split(".")
-    if len(parts) == 4:
-        return ".".join(parts[:3])
-    return ip
-
-
-def _admin_ip_allowed(ip: str) -> tuple:
-    """
-    Возвращает (allowed: bool, reason: str).
-    Разрешает если нет ни одного активного admin, либо если
-    запрашивающий IP в той же /24 подсети.
-    """
-    conn = get_conn()
-    admins = conn.execute(
-        "SELECT admin_ip FROM users WHERE role='admin' AND admin_ip IS NOT NULL AND admin_ip != ''"
-    ).fetchall()
-    conn.close()
-    if not admins:
-        return True, ""
-    my_net = _net24(ip)
-    for row in admins:
-        admin_net = _net24(row["admin_ip"])
-        if admin_net and my_net and admin_net == my_net:
-            return True, ""
-    return (
-        False,
-        "Администратор уже зарегистрирован в другой подсети. Только один администратор разрешён в локальной сети.",
-    )
-
-
-# ── Auth ─────────────────────────────────────────────────────────────────────
-
-
-def register(username: str, password: str, ip: str = "") -> dict:
-    salt = secrets.token_hex(16)
-    pw_hash = _hash(password, salt)
-    try:
-        conn = get_conn()
-        conn.execute(
-            "INSERT INTO users (username, pw_hash, salt) VALUES (?,?,?)",
-            (username.strip(), pw_hash, salt),
-        )
-        conn.commit()
-        user_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-        conn.close()
-        return {"ok": True, "user_id": user_id, "username": username.strip()}
-    except sqlite3.IntegrityError:
-        return {"ok": False, "error": "Имя пользователя уже занято"}
-
-
-def login(username: str, password: str, ip: str = "") -> dict:
-    conn = get_conn()
-    row = conn.execute(
-        "SELECT id, pw_hash, salt, role, admin_ip FROM users WHERE username=?",
-        (username.strip(),),
-    ).fetchone()
-    conn.close()
-    if not row:
-        return {"ok": False, "error": "Пользователь не найден"}
-    if _hash(password, row["salt"]) != row["pw_hash"]:
-        return {"ok": False, "error": "Неверный пароль"}
-
-    # Проверка IP для администратора
-    if row["role"] == "admin" and ip:
-        allowed, reason = _admin_ip_allowed(ip)
-        if not allowed:
-            return {"ok": False, "error": reason}
-        # Запоминаем IP администратора при первом входе
-        if not row["admin_ip"]:
-            conn = get_conn()
-            conn.execute("UPDATE users SET admin_ip=? WHERE id=?", (ip, row["id"]))
-            conn.commit()
-            conn.close()
-
-    token = secrets.token_hex(32)
-    expires = int(time.time()) + 86400 * 30
-    conn = get_conn()
-    conn.execute(
-        "INSERT INTO sessions (token, user_id, expires, ip) VALUES (?,?,?,?)",
-        (token, row["id"], expires, ip),
-    )
-    conn.commit()
-    conn.close()
-    return {
-        "ok": True,
-        "token": token,
-        "user_id": row["id"],
-        "username": username.strip(),
-        "role": row["role"],
-    }
-
-
-def get_user_by_token(token: str):
-    if not token:
-        return None
-    conn = get_conn()
-    row = conn.execute(
-        """SELECT u.id, u.username, u.role FROM users u
-           JOIN sessions s ON s.user_id=u.id
-           WHERE s.token=? AND s.expires>?""",
-        (token, int(time.time())),
-    ).fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def logout(token: str):
-    conn = get_conn()
-    conn.execute("DELETE FROM sessions WHERE token=?", (token,))
-    conn.commit()
-    conn.close()
+    return dict(row)
 
 
 # ── Queue ────────────────────────────────────────────────────────────────────

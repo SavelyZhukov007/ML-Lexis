@@ -186,9 +186,9 @@
 
   <div class="page-wrap">
     <!-- Banners -->
-    <div id="b-idle" class="banner banner-info">💡 Перейди в <a class="link" href="/train.html">Обучение</a> —
-      токенизируй текст и запусти трансформер. После первой эпохи можно идти в <a class="link"
-        href="/chat.html">Чат</a>.</div>
+    <div id="b-idle" class="banner banner-info">Готовая модель уже доступна в <a class="link"
+        href="/chat.html">Чате</a>. Если нужен свой стиль, перейди в <a class="link"
+        href="/train.html">Обучение</a>, токенизируй корпус и создай новую версию.</div>
     <div id="b-pause" class="banner banner-warn hidden">⏸ Обучение на паузе — перейди в <a class="link"
         href="/train.html">Обучение</a> и нажми «Продолжить».</div>
     <div id="b-done" class="banner banner-success hidden">🏆 Обучение завершено! <span id="b-done-sub"></span></div>
@@ -707,20 +707,7 @@
       const sp = document.getElementById('nav-status'); if (sp) sp.className = 'status-pill ' + (SCL[s] || 'sp-idle');
       tx('nav-status-txt', SLB[s] || s || '—');
 
-      // Скрываем admin-ссылки для обычных пользователей
-      checkAdminLinks();
     });
-
-    let _adminChecked = false;
-    async function checkAdminLinks() {
-      if (_adminChecked) return;
-      _adminChecked = true;
-      const me = await apiGet('/api/auth/me');
-      if (me.role !== 'admin') {
-        document.getElementById('nav-train')?.classList.add('hidden');
-        document.getElementById('nav-settings')?.classList.add('hidden');
-      }
-    }
 
     // Редроу при изменении размера окна
     window.addEventListener('resize', drawChart);

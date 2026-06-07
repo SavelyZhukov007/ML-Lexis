@@ -82,14 +82,6 @@ function connectSSE() {
   es.onerror = () => setTimeout(connectSSE, 3000);
 }
 
-// Auth check
-let _me = null;
-async function checkAuth() {
-  _me = await apiGet('/api/auth/me');
-  return _me;
-}
-function getMe() { return _me; }
-
 document.addEventListener('DOMContentLoaded', () => {
   initNav();
   connectSSE();

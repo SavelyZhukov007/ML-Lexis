@@ -16,8 +16,22 @@ Consciousness: многовариантная генерация + кросс-г
 """
 
 import re
-import torch
-import torch.nn.functional as F
+
+try:
+    import torch
+    import torch.nn.functional as F
+except ImportError:
+    torch = None
+    F = None
+
+_WORD_CHARS_RE = r"0-9A-Za-zа-яёА-ЯЁ"
+
+
+def _clean_markup_artifacts(text: str) -> str:
+    text = re.sub(r"[_]+", " ", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  Агент 1: Очистка мусора
@@ -26,6 +40,7 @@ import torch.nn.functional as F
 
 def clean_generated(text: str) -> str:
     text = re.sub(r"<(?:PAD|BOS|EOS|UNK)>", "", text, flags=re.IGNORECASE)
+    text = _clean_markup_artifacts(text)
     result, depth = [], 0
     for ch in text:
         if ch == "(":
@@ -137,7 +152,7 @@ def fix_agreement(text: str) -> str:
     i = 0
     while i < len(tokens):
         tok = tokens[i]
-        clean_tok = re.sub(r"[^\wа-яёА-ЯЁ]", "", tok, flags=re.UNICODE)
+        clean_tok = re.sub(rf"[^{_WORD_CHARS_RE}]", "", tok, flags=re.UNICODE)
         tok_lower = tok.lower().rstrip(".,!?;:")
 
         # Числительное + существительное
@@ -145,7 +160,7 @@ def fix_agreement(text: str) -> str:
         if m and i + 1 < len(tokens):
             num = int(m.group(1))
             nxt_raw = tokens[i + 1]
-            nxt_word = re.sub(r"[^\wа-яёА-ЯЁ]", "", nxt_raw, flags=re.UNICODE)
+            nxt_word = re.sub(rf"[^{_WORD_CHARS_RE}]", "", nxt_raw, flags=re.UNICODE)
             if nxt_word and re.search(r"[а-яё]", nxt_word, re.IGNORECASE):
                 parses = morph.parse(nxt_word)
                 if parses and ("NOUN" in parses[0].tag or "ADJF" in parses[0].tag):
@@ -165,7 +180,7 @@ def fix_agreement(text: str) -> str:
         # Предлог + существительное
         if tok_lower in PREP_CASE and i + 1 < len(tokens):
             nxt_raw = tokens[i + 1]
-            nxt_word = re.sub(r"[^\wа-яёА-ЯЁ]", "", nxt_raw, flags=re.UNICODE)
+            nxt_word = re.sub(rf"[^{_WORD_CHARS_RE}]", "", nxt_raw, flags=re.UNICODE)
             if nxt_word and re.search(r"[а-яё]", nxt_word, re.IGNORECASE):
                 parses = morph.parse(nxt_word)
                 if parses and "NOUN" in parses[0].tag:
@@ -182,7 +197,7 @@ def fix_agreement(text: str) -> str:
             parses = morph.parse(clean_tok)
             if parses and "ADJF" in parses[0].tag:
                 nxt_raw = tokens[i + 1]
-                nxt_word = re.sub(r"[^\wа-яёА-ЯЁ]", "", nxt_raw, flags=re.UNICODE)
+                nxt_word = re.sub(rf"[^{_WORD_CHARS_RE}]", "", nxt_raw, flags=re.UNICODE)
                 if nxt_word:
                     noun_p = morph.parse(nxt_word)
                     if noun_p and "NOUN" in noun_p[0].tag:
@@ -585,6 +600,8 @@ def _tok_ids(words, w2i, bos):
 
 def _batch_logits(model, ctx_ids: list, vs: int, device):
     """Получить логиты для следующего токена одним forward pass."""
+    if torch is None or F is None:
+        raise RuntimeError("PyTorch is required for deep processing")
     inp = torch.tensor([ctx_ids], dtype=torch.long).clamp(0, vs - 1).to(device)
     with torch.no_grad():
         logits = model(inp)[0, -1, :vs].float()
@@ -681,7 +698,7 @@ def deep_process(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CONSCIOUSNESS ALGORITHM — только для администратора
+#  CONSCIOUSNESS ALGORITHM
 #
 #  Идея: многовариантная параллельная генерация + кросс-голосование
 #  1. Генерируем N гипотез (diverse beam-like с разными температурами)
@@ -811,7 +828,7 @@ def consciousness_generate(
     corrections: dict = None,
 ) -> dict:
     """
-    Consciousness Algorithm — admin-only.
+    Consciousness Algorithm.
 
     Возвращает:
         {

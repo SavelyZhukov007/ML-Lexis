@@ -13,6 +13,7 @@ PAD = 0
 BOS = 1
 EOS = 2
 SPECIAL = ["<PAD>", "<BOS>", "<EOS>"]
+TOKEN_RE = re.compile(r"[а-яёa-z]+|[0-9]+|[.,!?;:—–\-\"'()«»]", re.IGNORECASE)
 
 
 def vocab_file(base_dir: Path | None = None) -> Path:
@@ -23,9 +24,15 @@ def tokens_file(base_dir: Path | None = None) -> Path:
     return Path(base_dir) / "tokens.npy" if base_dir else TOKENS_FILE
 
 
+def normalize_for_tokenizer(text: str) -> str:
+    text = text.replace("\ufeff", " ")
+    text = re.sub(r"[_]+", " ", text)
+    return text
+
+
 def tokenize_text(text: str) -> list[str]:
-    text = text.lower()
-    return re.findall(r"[а-яёa-zA-Zа-яА-ЯЁ]+|[0-9]+|[.,!?;:—–\-\"\'()«»]", text)
+    text = normalize_for_tokenizer(text).lower()
+    return TOKEN_RE.findall(text)
 
 
 def build_vocab(texts: list[str]) -> dict:
@@ -71,6 +78,8 @@ def build_and_save(main_file: str, extra_files: list[str] = None, base_dir: Path
     }
     vocab_path = vocab_file(base_dir)
     tokens_path = tokens_file(base_dir)
+    vocab_path.parent.mkdir(parents=True, exist_ok=True)
+    tokens_path.parent.mkdir(parents=True, exist_ok=True)
     vocab_path.write_text(json.dumps(json_data, ensure_ascii=False), "utf-8")
     np.save(str(tokens_path), arr)
     return {
@@ -100,13 +109,14 @@ def extend_vocab_with_words(new_words: list[str], base_dir: Path | None = None) 
     vocab = data["vocab"]
     w2i = data["w2i"]
     added = 0
-    for w in new_words:
-        w = w.lower().strip()
-        if w and w not in w2i:
-            idx = len(vocab)
-            vocab.append(w)
-            w2i[w] = idx
-            added += 1
+    for raw in new_words:
+        for w in tokenize_text(raw):
+            w = w.lower().strip()
+            if w and w not in w2i:
+                idx = len(vocab)
+                vocab.append(w)
+                w2i[w] = idx
+                added += 1
     if added:
         i2w = {str(i): w for i, w in enumerate(vocab)}
         data.update({"vocab": vocab, "w2i": w2i, "i2w": i2w, "vocab_size": len(vocab)})
